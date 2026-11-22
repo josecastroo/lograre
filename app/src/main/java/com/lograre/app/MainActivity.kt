@@ -11,11 +11,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.lograre.app.domain.clock.TrustedTimeSnapshot
 import com.lograre.app.ui.theme.LograreTheme
+import java.time.Instant
+import java.time.format.DateTimeFormatter
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -27,10 +34,22 @@ class MainActivity : ComponentActivity() {
                     .observeAllApps()
                     .collectAsState(initial = emptyList())
                 val isPinConfigured = container.pinRepository.isPinConfigured()
+                var clockSnapshot by remember { mutableStateOf<TrustedTimeSnapshot?>(null) }
+
+                LaunchedEffect(Unit) {
+                    val result = container.dailyResetCoordinator.checkAndPerformDailyReset(
+                        attemptNtpSync = true
+                    )
+                    clockSnapshot = when (result) {
+                        is com.lograre.app.domain.clock.DailyResetResult.ResetPerformed -> result.snapshot
+                        is com.lograre.app.domain.clock.DailyResetResult.NoResetNeeded -> result.snapshot
+                    }
+                }
 
                 BootstrapStatusScreen(
                     isPinConfigured = isPinConfigured,
-                    trackedAppsCount = trackedApps.size
+                    trackedAppsCount = trackedApps.size,
+                    clockSnapshot = clockSnapshot
                 )
             }
         }
@@ -40,7 +59,8 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun BootstrapStatusScreen(
     isPinConfigured: Boolean,
-    trackedAppsCount: Int
+    trackedAppsCount: Int,
+    clockSnapshot: TrustedTimeSnapshot?
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -66,6 +86,14 @@ private fun BootstrapStatusScreen(
             )
             Text(
                 text = "Apps supervisadas: $trackedAppsCount",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            val trustedTimeText = clockSnapshot?.let { snapshot ->
+                val localDateTime = Instant.ofEpochMilli(snapshot.utcMillis).atZone(snapshot.zoneId)
+                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z").format(localDateTime)
+            } ?: "Inicializando reloj de confianza..."
+            Text(
+                text = "Reloj de confianza: $trustedTimeText",
                 style = MaterialTheme.typography.bodyMedium
             )
         }
