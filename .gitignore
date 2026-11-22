@@ -1,0 +1,32 @@
+# Local AI / project context (not for GitHub)
+context/
+
+# Gradle & Android build artifacts
+.gradle/
+build/
+app/build/
+captures/
+*.apk
+*.ap_
+*.aab
+*.dex
+*.class
+
+# Local configuration (SDK paths, signing secrets)
+local.properties
+*.jks
+*.keystore
+
+# IntelliJ IDEA / Android Studio
+.idea/
+*.iml
+*.ipr
+*.iws
+.navigation/
+.externalNativeBuild/
+.cxx/
+
+# OS & temp files
+.DS_Store
+Thumbs.db
+*.log
