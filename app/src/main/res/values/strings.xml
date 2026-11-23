@@ -13,11 +13,11 @@
     <string name="home_summary_available_one">1 app con tiempo disponible hoy</string>
     <string name="home_summary_available_many">%1$d apps con tiempo disponible hoy</string>
     <string name="home_summary_all_paused">Todas tus apps están en pausa por hoy</string>
-    <string name="home_summary_empty">Un espacio tranquilo para cuidar tu atención</string>
+    <string name="home_summary_empty">Usa tu tiempo con intención.</string>
     <string name="home_empty_message">Aún no has elegido ninguna app. Empieza por la que más tiempo te quita.</string>
     <string name="home_add_app">Añadir app</string>
     <string name="home_accessibility_needed_title">Activa el permiso de accesibilidad</string>
-    <string name="home_accessibility_needed_body">Es necesario para medir el tiempo en primer plano y acompañarte cuando toque pausar.</string>
+    <string name="home_accessibility_needed_body">Es necesario para avisarte y hacer una pausa cuando se acabe tu tiempo.</string>
     <string name="home_open_permissions">Guía de permisos</string>
     <string name="home_settings_cd">Abrir apariencia y opciones</string>
 
