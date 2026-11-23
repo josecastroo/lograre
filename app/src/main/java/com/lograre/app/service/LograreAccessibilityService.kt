@@ -8,36 +8,58 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.PowerManager
 import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityWindowInfo
 import androidx.core.content.ContextCompat
 import com.lograre.app.LograreApplication
 import com.lograre.app.LograreContainer
+import com.lograre.app.domain.tracker.ForegroundEventDecision
+import com.lograre.app.domain.tracker.ForegroundEventFilter
 import com.lograre.app.domain.tracker.TrackerAction
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
  * Monitors foreground application changes via [AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED]
- * and drives [com.lograre.app.domain.tracker.ForegroundUsageTracker].
+ * and [AccessibilityEvent.TYPE_WINDOWS_CHANGED], processing all commands in strict FIFO order
+ * to avoid race conditions during rapid app switches, Recents gestures, and transient overlays.
  */
 class LograreAccessibilityService : AccessibilityService() {
 
+    private sealed interface ServiceCommand {
+        data object BootRestore : ServiceCommand
+        data class EvaluateForeground(
+            val isWindowStateChanged: Boolean,
+            val isWindowsChanged: Boolean,
+            val eventPackageName: String?,
+            val eventClassName: String?,
+            val isFullScreen: Boolean,
+            val activeWindowPackageName: String?
+        ) : ServiceCommand
+        data object ScreenOff : ServiceCommand
+        data object UserPresent : ServiceCommand
+        data object Tick : ServiceCommand
+    }
+
     private var serviceScope: CoroutineScope? = null
+    private var commandChannel: Channel<ServiceCommand>? = null
     private var tickerJob: Job? = null
+
     @Volatile
-    private var lastNonTransientPackage: String? = null
+    private var lastKnownForegroundPackage: String? = null
     private var screenReceiverRegistered: Boolean = false
 
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             when (intent.action) {
-                Intent.ACTION_SCREEN_OFF -> handleScreenOff()
-                Intent.ACTION_USER_PRESENT -> handleUserPresent()
+                Intent.ACTION_SCREEN_OFF -> enqueue(ServiceCommand.ScreenOff)
+                Intent.ACTION_USER_PRESENT -> enqueue(ServiceCommand.UserPresent)
             }
         }
     }
@@ -45,65 +67,80 @@ class LograreAccessibilityService : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
         AccessibilityServiceState.setRunning(true)
+
+        stopTicker()
+        commandChannel?.close()
         serviceScope?.cancel()
-        serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-        val filter = IntentFilter().apply {
-            addAction(Intent.ACTION_SCREEN_OFF)
-            addAction(Intent.ACTION_USER_PRESENT)
-        }
-        ContextCompat.registerReceiver(
-            this,
-            screenReceiver,
-            filter,
-            ContextCompat.RECEIVER_NOT_EXPORTED
-        )
-        screenReceiverRegistered = true
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        val channel = Channel<ServiceCommand>(Channel.UNLIMITED)
+        serviceScope = scope
+        commandChannel = channel
 
-        val container = getContainer()
-        if (container != null) {
-            serviceScope?.launch {
-                container.bootRestoreHandler.onDeviceBootOrRestore()
+        if (!screenReceiverRegistered) {
+            val filter = IntentFilter().apply {
+                addAction(Intent.ACTION_SCREEN_OFF)
+                addAction(Intent.ACTION_USER_PRESENT)
             }
+            ContextCompat.registerReceiver(
+                this,
+                screenReceiver,
+                filter,
+                ContextCompat.RECEIVER_NOT_EXPORTED
+            )
+            screenReceiverRegistered = true
+        }
+
+        scope.launch {
+            for (command in channel) {
+                val container = getContainer() ?: continue
+                processCommandSequentially(container, command)
+            }
+        }
+
+        // Enqueue restore first, then evaluate whatever app is currently on screen.
+        enqueue(ServiceCommand.BootRestore)
+        val currentWindowPkg = resolveActiveApplicationWindowPackage()
+        if (currentWindowPkg != null) {
+            enqueue(
+                ServiceCommand.EvaluateForeground(
+                    isWindowStateChanged = false,
+                    isWindowsChanged = true,
+                    eventPackageName = null,
+                    eventClassName = null,
+                    isFullScreen = true,
+                    activeWindowPackageName = currentWindowPkg
+                )
+            )
         }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event == null || event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-            return
-        }
-        val packageName = event.packageName?.toString()?.takeIf { it.isNotBlank() } ?: return
-        val container = getContainer() ?: return
+        if (event == null) return
+        val isWindowStateChanged = event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+        val isWindowsChanged = event.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED
+        if (!isWindowStateChanged && !isWindowsChanged) return
 
-        if (packageName in container.systemPackageProvider.getInputMethodPackages()) {
-            // Soft keyboard overlay: keep counting the app underneath.
-            return
-        }
+        val eventPackage = event.packageName?.toString()
+        val eventClass = event.className?.toString()
+        val isFullScreen = event.isFullScreen
+        val activeWindowPkg = resolveActiveApplicationWindowPackage()
 
-        if (packageName == SYSTEM_UI_PACKAGE) {
-            if (!isScreenInteractiveAndUnlocked()) {
-                handleScreenOff()
-            }
-            // Ignore transient SystemUI overlays (volume panel, heads-up notifications).
-            return
-        }
-
-        if (!isScreenInteractiveAndUnlocked()) {
-            handleScreenOff()
-            return
-        }
-
-        lastNonTransientPackage = packageName
-        serviceScope?.launch {
-            val action = container.foregroundUsageTracker.onForegroundPackageChanged(packageName)
-            dispatchAction(container, action)
-            updateTickerState(container)
-        }
+        enqueue(
+            ServiceCommand.EvaluateForeground(
+                isWindowStateChanged = isWindowStateChanged,
+                isWindowsChanged = isWindowsChanged,
+                eventPackageName = eventPackage,
+                eventClassName = eventClass,
+                isFullScreen = isFullScreen,
+                activeWindowPackageName = activeWindowPkg
+            )
+        )
     }
 
     override fun onInterrupt() {
-        val container = getContainer() ?: return
         stopTicker()
+        val container = getContainer() ?: return
         serviceScope?.launch {
             container.foregroundUsageTracker.onServiceStopped()
         }
@@ -112,6 +149,9 @@ class LograreAccessibilityService : AccessibilityService() {
     override fun onDestroy() {
         AccessibilityServiceState.setRunning(false)
         stopTicker()
+        commandChannel?.close()
+        commandChannel = null
+
         if (screenReceiverRegistered) {
             try {
                 unregisterReceiver(screenReceiver)
@@ -120,62 +160,150 @@ class LograreAccessibilityService : AccessibilityService() {
             }
             screenReceiverRegistered = false
         }
+
         val container = getContainer()
         if (container != null) {
             container.applicationScope.launch {
                 container.foregroundUsageTracker.onServiceStopped()
             }
         }
+
         serviceScope?.cancel()
         serviceScope = null
         super.onDestroy()
     }
 
-    private fun handleScreenOff() {
-        val container = getContainer() ?: return
-        stopTicker()
-        serviceScope?.launch {
-            val action = container.foregroundUsageTracker.onScreenOff()
-            dispatchAction(container, action)
+    private fun enqueue(command: ServiceCommand) {
+        commandChannel?.trySend(command)
+    }
+
+    private suspend fun processCommandSequentially(
+        container: LograreContainer,
+        command: ServiceCommand
+    ) {
+        when (command) {
+            ServiceCommand.BootRestore -> {
+                container.bootRestoreHandler.onDeviceBootOrRestore()
+            }
+
+            is ServiceCommand.EvaluateForeground -> {
+                val imePackages = container.systemPackageProvider.getInputMethodPackages()
+                val decision = ForegroundEventFilter.decide(
+                    isWindowStateChanged = command.isWindowStateChanged,
+                    isWindowsChanged = command.isWindowsChanged,
+                    eventPackageName = command.eventPackageName,
+                    eventClassName = command.eventClassName,
+                    isFullScreen = command.isFullScreen,
+                    activeApplicationWindowPackage = command.activeWindowPackageName,
+                    inputMethodPackages = imePackages,
+                    isScreenInteractiveAndUnlocked = isScreenInteractiveAndUnlocked()
+                )
+                when (decision) {
+                    ForegroundEventDecision.Ignore -> Unit
+                    ForegroundEventDecision.PauseScreenOff -> {
+                        stopTicker()
+                        val action = container.foregroundUsageTracker.onScreenOff()
+                        dispatchAction(container, action)
+                    }
+                    is ForegroundEventDecision.SwitchTo -> {
+                        lastKnownForegroundPackage = decision.packageName
+                        val action = container.foregroundUsageTracker.onForegroundPackageChanged(
+                            decision.packageName
+                        )
+                        dispatchAction(container, action)
+                        updateTickerState(container)
+                    }
+                }
+            }
+
+            ServiceCommand.ScreenOff -> {
+                stopTicker()
+                val action = container.foregroundUsageTracker.onScreenOff()
+                dispatchAction(container, action)
+            }
+
+            ServiceCommand.UserPresent -> {
+                if (!isScreenInteractiveAndUnlocked()) return
+                val activePkg = resolveActiveApplicationWindowPackage() ?: lastKnownForegroundPackage
+                if (activePkg != null) {
+                    lastKnownForegroundPackage = activePkg
+                    val action = container.foregroundUsageTracker.onForegroundPackageChanged(activePkg)
+                    dispatchAction(container, action)
+                    updateTickerState(container)
+                }
+            }
+
+            ServiceCommand.Tick -> {
+                if (!isScreenInteractiveAndUnlocked()) {
+                    stopTicker()
+                    val action = container.foregroundUsageTracker.onScreenOff()
+                    dispatchAction(container, action)
+                    return
+                }
+                val activeWindowPkg = resolveActiveApplicationWindowPackage()
+                val currentSessionPkg = container.foregroundUsageTracker.currentActivePackage()
+                if (activeWindowPkg != null &&
+                    currentSessionPkg != null &&
+                    activeWindowPkg != currentSessionPkg
+                ) {
+                    val decision = ForegroundEventFilter.decide(
+                        isWindowStateChanged = false,
+                        isWindowsChanged = true,
+                        eventPackageName = null,
+                        eventClassName = null,
+                        isFullScreen = true,
+                        activeApplicationWindowPackage = activeWindowPkg,
+                        inputMethodPackages = container.systemPackageProvider.getInputMethodPackages(),
+                        isScreenInteractiveAndUnlocked = true
+                    )
+                    if (decision is ForegroundEventDecision.SwitchTo &&
+                        decision.packageName != currentSessionPkg
+                    ) {
+                        lastKnownForegroundPackage = decision.packageName
+                        val switchAction = container.foregroundUsageTracker.onForegroundPackageChanged(
+                            decision.packageName
+                        )
+                        dispatchAction(container, switchAction)
+                        updateTickerState(container)
+                        return
+                    }
+                }
+                val action = container.foregroundUsageTracker.tick()
+                dispatchAction(container, action)
+                if (!container.foregroundUsageTracker.hasActiveSession()) {
+                    stopTicker()
+                }
+            }
         }
     }
 
-    private fun handleUserPresent() {
-        val container = getContainer() ?: return
-        val resumedPackage = lastNonTransientPackage ?: return
-        if (!isScreenInteractiveAndUnlocked()) return
+    private fun resolveActiveApplicationWindowPackage(): String? = try {
+        val appWindows = windows?.filter { it.type == AccessibilityWindowInfo.TYPE_APPLICATION }
+        val focusedWindow = appWindows?.firstOrNull { it.isFocused }
+            ?: appWindows?.firstOrNull { it.isActive }
+            ?: appWindows?.maxByOrNull { it.layer }
 
-        serviceScope?.launch {
-            val action = container.foregroundUsageTracker.onForegroundPackageChanged(resumedPackage)
-            dispatchAction(container, action)
-            updateTickerState(container)
-        }
+        val fromWindows = focusedWindow?.root?.packageName?.toString()?.takeIf { it.isNotBlank() }
+        fromWindows ?: rootInActiveWindow?.packageName?.toString()?.takeIf { it.isNotBlank() }
+    } catch (_: Exception) {
+        null
     }
 
     private suspend fun updateTickerState(container: LograreContainer) {
         if (container.foregroundUsageTracker.hasActiveSession()) {
-            startTickerIfNeeded(container)
+            startTickerIfNeeded()
         } else {
             stopTicker()
         }
     }
 
-    private fun startTickerIfNeeded(container: LograreContainer) {
+    private fun startTickerIfNeeded() {
         if (tickerJob?.isActive == true) return
         val scope = serviceScope ?: return
         tickerJob = scope.launch {
             while (isActive) {
                 delay(TICK_INTERVAL_MILLIS)
-                if (!isScreenInteractiveAndUnlocked()) {
-                    val action = container.foregroundUsageTracker.onScreenOff()
-                    dispatchAction(container, action)
-                    break
-                }
-                val action = container.foregroundUsageTracker.tick()
-                dispatchAction(container, action)
-                if (!container.foregroundUsageTracker.hasActiveSession()) {
-                    break
-                }
+                enqueue(ServiceCommand.Tick)
             }
         }
     }
@@ -210,7 +338,6 @@ class LograreAccessibilityService : AccessibilityService() {
         (application as? LograreApplication)?.container
 
     companion object {
-        private const val SYSTEM_UI_PACKAGE = "com.android.systemui"
         private const val TICK_INTERVAL_MILLIS = 1_000L
     }
 }
