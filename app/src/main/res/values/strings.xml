@@ -58,6 +58,19 @@
     <string name="pin_setup_title">Elige un PIN</string>
     <string name="pin_setup_subtitle">Pide a alguien de confianza que lo escriba por ti.</string>
     <string name="pin_setup_confirm">Escríbelo otra vez</string>
+    <string name="pin_dots_cd">PIN: %1$d dígitos introducidos</string>
+    <string name="pin_digit_cd">Dígito %1$s</string>
+    <string name="pin_backspace_cd">Borrar dígito</string>
+    <string name="pin_confirm_unlock">Desbloquear</string>
+    <string name="lock_unlocked_subtitle">Elige cómo quieres continuar con %1$s.</string>
+    <string name="lock_add_more_time">Añadir más tiempo</string>
+    <string name="lock_preset_minutes">+%1$d</string>
+    <string name="lock_preset_other">Otro</string>
+    <string name="lock_custom_minutes_label">Minutos</string>
+    <string name="lock_confirm_add_minutes">Añadir %1$d min</string>
+    <string name="lock_confirm_add_custom">Añadir tiempo</string>
+    <string name="lock_ignore_today">Ignorar el bloqueo hoy</string>
+    <string name="lock_pin_not_configured">Aún no has configurado un PIN en lograre. Abre la app para elegir uno.</string>
     <string name="action_exit">Salir</string>
     <string name="warning_five_minutes_title">Te quedan 5 minutos en %1$s.</string>
 </resources>
