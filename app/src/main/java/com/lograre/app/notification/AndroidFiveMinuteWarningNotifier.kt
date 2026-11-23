@@ -58,7 +58,8 @@ class AndroidFiveMinuteWarningNotifier(
         )
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_notification_timer)
+            .setSmallIcon(R.drawable.ic_notification_droplet)
+            .setColor(NOTIFICATION_ACCENT_COLOR)
             .setContentTitle(content.title)
             .setContentText(content.body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(content.body))
@@ -89,6 +90,7 @@ class AndroidFiveMinuteWarningNotifier(
 
     companion object {
         const val CHANNEL_ID = "lograre_time_warnings"
+        private const val NOTIFICATION_ACCENT_COLOR = 0xFF2F8F78.toInt()
         private const val CHANNEL_NAME = "Avisos de tiempo restante"
         private const val CHANNEL_DESCRIPTION =
             "Avisa cuando faltan 5 minutos para agotar el límite diario de una aplicación."
