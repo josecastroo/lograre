@@ -1,7 +1,6 @@
 package com.lograre.app
 
 import android.app.Application
-import android.util.Log
 import com.lograre.app.data.apps.AndroidInstalledAppsProvider
 import com.lograre.app.data.apps.InstalledAppsProvider
 import com.lograre.app.data.local.LograreDatabase
@@ -10,6 +9,7 @@ import com.lograre.app.data.repository.AppLimitRepository
 import com.lograre.app.data.repository.TrustedClockStateRepository
 import com.lograre.app.data.security.KeystorePinStorage
 import com.lograre.app.data.security.PinRepository
+import com.lograre.app.domain.boot.BootRestoreHandler
 import com.lograre.app.domain.clock.AndroidDeviceClock
 import com.lograre.app.domain.clock.DailyResetCoordinator
 import com.lograre.app.domain.clock.DeviceClock
@@ -19,6 +19,7 @@ import com.lograre.app.domain.tracker.AppBlockLauncher
 import com.lograre.app.domain.tracker.FiveMinuteWarningNotifier
 import com.lograre.app.domain.tracker.ForegroundUsageTracker
 import com.lograre.app.domain.tracker.SystemPackageProvider
+import com.lograre.app.notification.AndroidFiveMinuteWarningNotifier
 import com.lograre.app.service.AndroidSystemPackageProvider
 import com.lograre.app.ui.lock.ActivityAppBlockLauncher
 import kotlinx.coroutines.CoroutineScope
@@ -59,15 +60,18 @@ class LograreContainer(application: Application) {
         protectedPackagesProvider = { systemPackageProvider.getProtectedPackages() }
     )
 
+    val bootRestoreHandler: BootRestoreHandler = BootRestoreHandler(
+        dailyResetCoordinator = dailyResetCoordinator,
+        foregroundUsageTracker = foregroundUsageTracker
+    )
+
     val appBlockLauncher: AppBlockLauncher = ActivityAppBlockLauncher(application)
 
-    // Replaced with real NotificationManager alert in Step 6.
-    val warningNotifier: FiveMinuteWarningNotifier = FiveMinuteWarningNotifier { packageName, remainingMillis ->
-        Log.i(TAG, "5-minute warning for $packageName (remaining=${remainingMillis}ms)")
-    }
+    private val androidWarningNotifier = AndroidFiveMinuteWarningNotifier(application)
+    val warningNotifier: FiveMinuteWarningNotifier = androidWarningNotifier
 
-    companion object {
-        private const val TAG = "LograreContainer"
+    fun initialize() {
+        androidWarningNotifier.ensureNotificationChannel()
     }
 }
 
@@ -78,6 +82,7 @@ class LograreApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         container = LograreContainer(this)
+        container.initialize()
         container.applicationScope.launch {
             container.dailyResetCoordinator.checkAndPerformDailyReset(attemptNtpSync = true)
         }

@@ -59,6 +59,13 @@ class LograreAccessibilityService : AccessibilityService() {
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
         screenReceiverRegistered = true
+
+        val container = getContainer()
+        if (container != null) {
+            serviceScope?.launch {
+                container.bootRestoreHandler.onDeviceBootOrRestore()
+            }
+        }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
