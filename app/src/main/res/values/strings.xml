@@ -53,6 +53,7 @@
     <!-- Pantalla de bloqueo y PIN (base compartida en strings.xml) -->
     <string name="lock_title">Tu tiempo en %1$s terminó por hoy.</string>
     <string name="lock_subtitle">Respira un momento.</string>
+    <string name="lock_subtitle_enter_pin">Introduce tu PIN</string>
     <string name="lock_talkback_wait">El PIN estará disponible en %1$d segundos</string>
     <string name="lock_talkback_keypad_ready">Teclado disponible. Escribe tu PIN.</string>
     <string name="pin_incorrect">Ese no es el código. Respira e inténtalo de nuevo.</string>

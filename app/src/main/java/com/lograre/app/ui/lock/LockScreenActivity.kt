@@ -9,6 +9,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -436,19 +437,29 @@ internal fun LockScreenContent(
                     color = palette.text,
                     textAlign = TextAlign.Center
                 )
-                Text(
-                    text = when (uiState.stage) {
-                        LockScreenStage.UNLOCKED_OPTIONS ->
-                            stringResource(R.string.lock_unlocked_subtitle, uiState.appLabel)
-                        LockScreenStage.PIN_NOT_CONFIGURED ->
-                            stringResource(R.string.lock_pin_not_configured)
-                        LockScreenStage.PIN_ENTRY ->
-                            stringResource(R.string.lock_subtitle)
-                    },
-                    style = typo.body,
-                    color = palette.textSecondary,
-                    textAlign = TextAlign.Center
-                )
+                val subtitleText = when (uiState.stage) {
+                    LockScreenStage.UNLOCKED_OPTIONS ->
+                        stringResource(R.string.lock_unlocked_subtitle, uiState.appLabel)
+                    LockScreenStage.PIN_NOT_CONFIGURED ->
+                        stringResource(R.string.lock_pin_not_configured)
+                    LockScreenStage.PIN_ENTRY -> if (showKeypad) {
+                        stringResource(R.string.lock_subtitle_enter_pin)
+                    } else {
+                        stringResource(R.string.lock_subtitle)
+                    }
+                }
+                Crossfade(
+                    targetState = subtitleText,
+                    animationSpec = tween(durationMillis = if (animationsEnabled) 300 else 0),
+                    label = "lock_subtitle_crossfade"
+                ) { textValue ->
+                    Text(
+                        text = textValue,
+                        style = typo.body,
+                        color = palette.textSecondary,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
 
             when (uiState.stage) {
