@@ -37,6 +37,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -46,7 +47,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.isTraversalGroup
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.text.input.KeyboardType
@@ -55,6 +59,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.lograre.app.LograreApplication
 import com.lograre.app.R
+import com.lograre.app.ui.components.BREATH_CYCLE_DURATION_MS
 import com.lograre.app.ui.components.BreathingCircle
 import com.lograre.app.ui.components.GlassCard
 import com.lograre.app.ui.components.PinDots
@@ -66,6 +71,7 @@ import com.lograre.app.ui.components.ZenHaptics
 import com.lograre.app.ui.components.ZenPillChip
 import com.lograre.app.ui.components.ZenTextButton
 import com.lograre.app.ui.components.rememberAnimationsEnabled
+import com.lograre.app.ui.components.rememberIsLifecycleResumed
 import com.lograre.app.ui.main.AppIconBadge
 import com.lograre.app.ui.theme.AppTheme
 import com.lograre.app.ui.theme.LocalZenPalette
@@ -74,14 +80,31 @@ import com.lograre.app.ui.theme.ThemeMode
 import com.lograre.app.ui.theme.ZenDimens
 import com.lograre.app.ui.theme.ZenShapes
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+internal fun totalWaitDurationMillis(
+    requiredBreathCycles: Int = LockScreenActivity.BREATH_CYCLES_BEFORE_KEYPAD
+): Long = requiredBreathCycles.coerceAtLeast(0) * BREATH_CYCLE_DURATION_MS
+
+internal fun totalWaitSeconds(
+    requiredBreathCycles: Int = LockScreenActivity.BREATH_CYCLES_BEFORE_KEYPAD
+): Int = (totalWaitDurationMillis(requiredBreathCycles) / 1_000L).toInt()
+
+internal fun computeWaterFillFraction(
+    elapsedMillis: Long,
+    totalWaitMillis: Long
+): Float {
+    if (totalWaitMillis <= 0L) return 1f
+    return (elapsedMillis.coerceAtLeast(0L).toFloat() / totalWaitMillis.toFloat()).coerceIn(0f, 1f)
+}
+
 internal fun shouldShowLockKeypad(
-    completedBreathCycles: Int,
-    requiredBreathCycles: Int = LockScreenActivity.BREATH_CYCLES_BEFORE_KEYPAD,
-    animationsEnabled: Boolean = true
-): Boolean = !animationsEnabled || requiredBreathCycles <= 0 || completedBreathCycles >= requiredBreathCycles
+    elapsedMillis: Long,
+    requiredBreathCycles: Int = LockScreenActivity.BREATH_CYCLES_BEFORE_KEYPAD
+): Boolean = elapsedMillis >= totalWaitDurationMillis(requiredBreathCycles)
 
 private sealed interface ExtraTimeChoice {
     data class Preset(val minutes: Int) : ExtraTimeChoice
@@ -100,6 +123,7 @@ private sealed interface ExtraTimeChoice {
 class LockScreenActivity : ComponentActivity() {
 
     private var blockedPackageState by mutableStateOf<String?>(null)
+    private var lockSessionId by mutableIntStateOf(0)
     private var unlockedAndReturning: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -113,6 +137,7 @@ class LockScreenActivity : ComponentActivity() {
             return
         }
         blockedPackageState = initialPackage
+        lockSessionId += 1
 
         val container = (application as LograreApplication).container
 
@@ -160,6 +185,7 @@ class LockScreenActivity : ComponentActivity() {
 
                 LockScreenContent(
                     uiState = uiState,
+                    sessionKey = lockSessionId,
                     pinErrorTrigger = pinErrorTrigger,
                     requiredBreathCycles = BREATH_CYCLES_BEFORE_KEYPAD,
                     onDigitClick = controller::onDigitPressed,
@@ -215,6 +241,7 @@ class LockScreenActivity : ComponentActivity() {
         if (newPackage != null) {
             unlockedAndReturning = false
             blockedPackageState = newPackage
+            lockSessionId += 1
         }
     }
 
@@ -260,6 +287,7 @@ class LockScreenActivity : ComponentActivity() {
 @Composable
 internal fun LockScreenContent(
     uiState: LockScreenUiState,
+    sessionKey: Int = 0,
     pinErrorTrigger: Int,
     requiredBreathCycles: Int,
     onDigitClick: (Char) -> Unit,
@@ -274,13 +302,64 @@ internal fun LockScreenContent(
     val palette = LocalZenPalette.current
     val typo = LocalZenTypography.current
     val animationsEnabled = rememberAnimationsEnabled()
+    val isResumed = rememberIsLifecycleResumed()
     val density = LocalDensity.current
+    val view = LocalView.current
 
-    var completedCycles by remember(uiState.packageName) { mutableIntStateOf(0) }
+    val totalWaitMs = remember(requiredBreathCycles) {
+        totalWaitDurationMillis(requiredBreathCycles)
+    }
+    val waitSeconds = remember(requiredBreathCycles) {
+        totalWaitSeconds(requiredBreathCycles)
+    }
+
+    var elapsedWaitMs by remember(sessionKey, uiState.packageName, requiredBreathCycles) {
+        mutableLongStateOf(0L)
+    }
+    var completionRippleTrigger by remember(sessionKey, uiState.packageName, requiredBreathCycles) {
+        mutableIntStateOf(0)
+    }
+    var completionNotified by remember(sessionKey, uiState.packageName, requiredBreathCycles) {
+        mutableStateOf(totalWaitMs <= 0L)
+    }
+
+    // Monotonic linear wait loop (continues rising linearly even when ANIMATOR_DURATION_SCALE == 0,
+    // and pauses when the screen is not RESUMED).
+    LaunchedEffect(sessionKey, uiState.packageName, requiredBreathCycles, uiState.stage, isResumed) {
+        if (uiState.stage != LockScreenStage.PIN_ENTRY || totalWaitMs <= 0L) {
+            elapsedWaitMs = totalWaitMs
+            return@LaunchedEffect
+        }
+        if (!isResumed || elapsedWaitMs >= totalWaitMs) return@LaunchedEffect
+
+        var lastNano = System.nanoTime()
+        while (isActive && elapsedWaitMs < totalWaitMs) {
+            delay(16L)
+            val nowNano = System.nanoTime()
+            val deltaMs = ((nowNano - lastNano) / 1_000_000L).coerceAtLeast(0L)
+            lastNano = nowNano
+            elapsedWaitMs = (elapsedWaitMs + deltaMs).coerceAtMost(totalWaitMs)
+        }
+
+        if (elapsedWaitMs >= totalWaitMs && !completionNotified) {
+            completionNotified = true
+            ZenHaptics.keyPress(view)
+            if (animationsEnabled) {
+                completionRippleTrigger += 1
+            }
+        }
+    }
+
+    val waterLevel = remember(elapsedWaitMs, totalWaitMs, uiState.stage) {
+        if (uiState.stage != LockScreenStage.PIN_ENTRY) {
+            1f
+        } else {
+            computeWaterFillFraction(elapsedWaitMs, totalWaitMs)
+        }
+    }
     val showKeypad = shouldShowLockKeypad(
-        completedBreathCycles = completedCycles,
-        requiredBreathCycles = requiredBreathCycles,
-        animationsEnabled = animationsEnabled
+        elapsedMillis = elapsedWaitMs,
+        requiredBreathCycles = requiredBreathCycles
     )
     val isCompactCircle = uiState.stage != LockScreenStage.PIN_ENTRY || showKeypad
 
@@ -292,6 +371,14 @@ internal fun LockScreenContent(
         ),
         label = "lock_icon_size"
     )
+
+    // TalkBack polite live region: announces ONCE on open ("El PIN estará disponible en N segundos")
+    // and ONCE when the keypad becomes available ("Teclado disponible. Escribe tu PIN.").
+    val circleTalkBackAnnouncement = when {
+        uiState.stage != LockScreenStage.PIN_ENTRY -> ""
+        !showKeypad && waitSeconds > 0 -> stringResource(R.string.lock_talkback_wait, waitSeconds)
+        else -> stringResource(R.string.lock_talkback_keypad_ready)
+    }
 
     ZenBackground(dimmedForFocus = true) {
         Column(
@@ -314,8 +401,15 @@ internal fun LockScreenContent(
         ) {
             BreathingCircle(
                 compact = isCompactCircle,
-                onCycleCompleted = { cycles -> completedCycles = cycles },
-                modifier = Modifier.semantics { traversalIndex = 4f }
+                waterLevel = waterLevel,
+                completionRippleTrigger = completionRippleTrigger,
+                modifier = Modifier.semantics {
+                    traversalIndex = 4f
+                    if (circleTalkBackAnnouncement.isNotEmpty()) {
+                        liveRegion = LiveRegionMode.Polite
+                        contentDescription = circleTalkBackAnnouncement
+                    }
+                }
             ) {
                 AppIconBadge(
                     packageName = uiState.packageName,
