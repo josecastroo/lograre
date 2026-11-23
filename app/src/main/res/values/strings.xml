@@ -58,6 +58,41 @@
     <string name="pin_setup_title">Elige un PIN</string>
     <string name="pin_setup_subtitle">Pide a alguien de confianza que lo escriba por ti.</string>
     <string name="pin_setup_confirm">Escríbelo otra vez</string>
+    <string name="pin_setup_next">Siguiente</string>
+    <string name="pin_setup_save">Guardar PIN</string>
+    <string name="pin_setup_restart">Empezar de nuevo</string>
+    <string name="change_pin_title">Cambiar PIN</string>
+    <string name="change_pin_step_current">Introduce tu PIN actual</string>
+    <string name="change_pin_step_new">Elige un nuevo PIN (mín. 4 dígitos)</string>
+    <string name="change_pin_step_confirm">Escríbelo otra vez</string>
+    <string name="change_pin_verify">Verificar</string>
+    <string name="change_pin_save">Guardar nuevo PIN</string>
+    <string name="pin_confirm_change">Confirmar</string>
+
+    <!-- Selector de apps -->
+    <string name="picker_title">Elegir aplicación</string>
+    <string name="picker_search_hint">Buscar aplicación</string>
+    <string name="picker_empty_all">No hay más aplicaciones disponibles para añadir.</string>
+    <string name="picker_empty_query">No encontramos aplicaciones para \"%1$s\".</string>
+    <string name="picker_select_cd">Seleccionar %1$s</string>
+
+    <!-- Guía de permisos -->
+    <string name="permissions_title">Guía de permisos</string>
+    <string name="permissions_subtitle">Activa estos permisos para que lograre te acompañe sin interrupciones.</string>
+    <string name="permissions_status_active">Activo</string>
+    <string name="permissions_status_pending">Pendiente</string>
+    <string name="perm_accessibility_title">Servicio de accesibilidad</string>
+    <string name="perm_accessibility_desc">Detecta la app en primer plano para medir el tiempo diario y mostrar la pausa con PIN.</string>
+    <string name="perm_accessibility_action_enable">Activar accesibilidad</string>
+    <string name="perm_accessibility_action_review">Revisar ajuste</string>
+    <string name="perm_notifications_title">Notificaciones</string>
+    <string name="perm_notifications_desc">Permite avisarte con calma cuando te queden 5 minutos en una aplicación.</string>
+    <string name="perm_notifications_action_enable">Permitir notificaciones</string>
+    <string name="perm_notifications_action_review">Ajustes de notificaciones</string>
+    <string name="perm_battery_title">Optimización de batería</string>
+    <string name="perm_battery_desc">Recomendado para evitar que Android detenga el seguimiento en segundo plano.</string>
+    <string name="perm_battery_action_enable">Excluir de optimización</string>
+    <string name="perm_battery_action_review">Revisar batería</string>
     <string name="pin_dots_cd">PIN: %1$d dígitos introducidos</string>
     <string name="pin_digit_cd">Dígito %1$s</string>
     <string name="pin_backspace_cd">Borrar dígito</string>
