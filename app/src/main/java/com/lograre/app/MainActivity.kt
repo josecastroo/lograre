@@ -138,6 +138,10 @@ class MainActivity : ComponentActivity() {
                         MainDestination.HOME -> {
                             HomeScreen(
                                 uiState = uiState,
+                                currentThemeMode = themeMode,
+                                onSelectThemeMode = { mode ->
+                                    container.themePreferenceRepository.setThemeMode(mode)
+                                },
                                 onAddAppClick = {
                                     scope.launch {
                                         controller.openAppPicker()
