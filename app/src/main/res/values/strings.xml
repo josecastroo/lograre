@@ -12,7 +12,7 @@
     <!-- Pantalla principal -->
     <string name="home_summary_available_one">1 app con tiempo disponible hoy</string>
     <string name="home_summary_available_many">%1$d apps con tiempo disponible hoy</string>
-    <string name="home_summary_all_paused">Todas tus apps están en pausa por hoy</string>
+    <string name="home_summary_all_paused">Todas tus apps están bloqueadas por hoy</string>
     <string name="home_summary_empty">Usa tu tiempo con intención.</string>
     <string name="home_empty_message">Aún no has elegido ninguna app. Empieza por la que más tiempo te quita.</string>
     <string name="home_add_app">Añadir app</string>
@@ -22,12 +22,12 @@
     <string name="home_settings_cd">Abrir apariencia y opciones</string>
 
     <!-- Estados y nivel de agua -->
-    <string name="status_paused">En pausa</string>
+    <string name="status_paused">Bloqueada</string>
     <string name="status_free_today">Libre hoy</string>
     <string name="app_usage_summary">%1$s de %2$s</string>
     <string name="app_usage_summary_with_extra">%1$s de %2$s (+%3$d min)</string>
     <string name="water_cd_remaining">%1$s, quedan %2$d de %3$d minutos</string>
-    <string name="water_cd_paused">%1$s, en pausa</string>
+    <string name="water_cd_paused">%1$s, bloqueada</string>
     <string name="water_cd_free_today">%1$s, libre hoy</string>
 
     <!-- Acciones de app y edición de límite -->
