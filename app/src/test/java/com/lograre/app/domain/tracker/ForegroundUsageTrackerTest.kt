@@ -274,4 +274,36 @@ class ForegroundUsageTrackerTest {
         assertEquals(60_000L, h.appRepo.getApp(appA)!!.usedMillisToday)
         assertEquals(120_000L, h.appRepo.getApp(appB)!!.usedMillisToday)
     }
+
+    @Test
+    fun `raising daily limit from exhausted 1 min to 4 min resumes counting cleanly`() = runTest {
+        val start = utcMillis(2026, 11, 22, 16, 0)
+        val h = TestHarness(start)
+        val dayId = h.trustedClock.now().dayId
+        val instagram = "com.instagram.android"
+
+        h.appRepo.addOrUpdateApp(instagram, dailyLimitMinutes = 1, currentDayId = dayId, nowMillis = start)
+        assertEquals(TrackerAction.None, h.tracker.onForegroundPackageChanged(instagram))
+
+        // Exhaust 1 minute -> blocked
+        h.deviceClock.advanceRealTime(60_000L)
+        assertEquals(TrackerAction.BlockRequired(instagram), h.tracker.tick())
+        assertFalse(h.tracker.hasActiveSession())
+
+        // User opens lograre and increases daily limit to 4 minutes
+        h.tracker.onForegroundPackageChanged("com.lograre.app")
+        h.appRepo.addOrUpdateApp(instagram, dailyLimitMinutes = 4, currentDayId = dayId, nowMillis = start + 65_000L)
+
+        // User returns to Instagram -> counting resumes from 1 min up to 4 min
+        assertEquals(TrackerAction.None, h.tracker.onForegroundPackageChanged(instagram))
+        assertTrue(h.tracker.hasActiveSession())
+
+        h.deviceClock.advanceRealTime(35_000L)
+        assertEquals(TrackerAction.None, h.tracker.tick())
+        assertEquals(95_000L, h.appRepo.getApp(instagram)!!.usedMillisToday)
+
+        h.deviceClock.advanceRealTime(145_000L)
+        assertEquals(TrackerAction.BlockRequired(instagram), h.tracker.tick())
+        assertEquals(240_000L, h.appRepo.getApp(instagram)!!.usedMillisToday)
+    }
 }

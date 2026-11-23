@@ -235,6 +235,7 @@ class MainScreenControllerTest {
         assertEquals("1h", DurationFormatter.formatMinutes(60))
         assertEquals("1h 30m", DurationFormatter.formatMinutes(90))
         assertEquals("45s", DurationFormatter.formatMillis(45_000L))
-        assertEquals("2 min", DurationFormatter.formatMillis(125_000L))
+        assertEquals("2 min", DurationFormatter.formatMillis(120_000L))
+        assertEquals("2m 5s", DurationFormatter.formatMillis(125_000L))
     }
 }

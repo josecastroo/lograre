@@ -17,7 +17,16 @@ object DurationFormatter {
         val totalSeconds = (millis.coerceAtLeast(0L) / 1_000L)
         if (totalSeconds == 0L) return "0 min"
         if (totalSeconds < 60L) return "${totalSeconds}s"
+
         val totalMinutes = (totalSeconds / 60L).toInt()
+        val remSeconds = (totalSeconds % 60L).toInt()
+        if (totalMinutes < 60) {
+            return if (remSeconds == 0) {
+                "$totalMinutes min"
+            } else {
+                "${totalMinutes}m ${remSeconds}s"
+            }
+        }
         return formatMinutes(totalMinutes)
     }
 }
