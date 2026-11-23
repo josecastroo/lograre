@@ -2,6 +2,8 @@ package com.lograre.app
 
 import android.app.Application
 import android.util.Log
+import com.lograre.app.data.apps.AndroidInstalledAppsProvider
+import com.lograre.app.data.apps.InstalledAppsProvider
 import com.lograre.app.data.local.LograreDatabase
 import com.lograre.app.data.network.SntpClient
 import com.lograre.app.data.repository.AppLimitRepository
@@ -46,6 +48,10 @@ class LograreContainer(application: Application) {
     )
 
     val systemPackageProvider: SystemPackageProvider = AndroidSystemPackageProvider(application)
+    val installedAppsProvider: InstalledAppsProvider = AndroidInstalledAppsProvider(
+        context = application,
+        systemPackageProvider = systemPackageProvider
+    )
     val foregroundUsageTracker: ForegroundUsageTracker = ForegroundUsageTracker(
         deviceClock = deviceClock,
         appLimitRepository = appLimitRepository,

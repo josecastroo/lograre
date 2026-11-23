@@ -1,127 +1,245 @@
 package com.lograre.app
 
+import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import com.lograre.app.domain.clock.DailyResetResult
-import com.lograre.app.domain.clock.TrustedTimeSnapshot
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.lifecycle.lifecycleScope
+import com.lograre.app.data.apps.AppIconLoader
 import com.lograre.app.service.AccessibilityServiceState
+import com.lograre.app.service.PermissionStatusChecker
+import com.lograre.app.ui.main.AppPickerScreen
+import com.lograre.app.ui.main.ChangePinScreen
+import com.lograre.app.ui.main.HomeScreen
+import com.lograre.app.ui.main.InitialPinSetupScreen
+import com.lograre.app.ui.main.LimitEditorDialog
+import com.lograre.app.ui.main.MainDestination
+import com.lograre.app.ui.main.MainScreenController
+import com.lograre.app.ui.main.PermissionsGuideScreen
+import com.lograre.app.ui.main.PinConfirmationScreen
 import com.lograre.app.ui.theme.LograreTheme
-import java.time.Instant
-import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+
+    private lateinit var controller: MainScreenController
+
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) {
+        refreshPermissionsStatus()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val container = (application as LograreApplication).container
+
+        controller = MainScreenController(
+            pinRepository = container.pinRepository,
+            appLimitRepository = container.appLimitRepository,
+            dailyResetCoordinator = container.dailyResetCoordinator,
+            installedAppsProvider = container.installedAppsProvider,
+            labelResolver = { pkg -> AppIconLoader.resolveAppLabel(this, pkg) }
+        )
+
+        lifecycleScope.launch {
+            container.appLimitRepository.observeAllApps().collect { apps ->
+                controller.updateTrackedApps(apps)
+            }
+        }
+
+        lifecycleScope.launch {
+            AccessibilityServiceState.isRunning.collect {
+                refreshPermissionsStatus()
+            }
+        }
+
+        refreshPermissionsStatus()
+
         setContent {
             LograreTheme {
-                val trackedApps by container.appLimitRepository
-                    .observeAllApps()
-                    .collectAsState(initial = emptyList())
-                val isAccessibilityRunning by AccessibilityServiceState.isRunning.collectAsState()
-                val isPinConfigured = container.pinRepository.isPinConfigured()
-                var clockSnapshot by remember { mutableStateOf<TrustedTimeSnapshot?>(null) }
+                val uiState by controller.uiState.collectAsState()
+                val scope = rememberCoroutineScope()
 
-                LaunchedEffect(Unit) {
-                    val result = container.dailyResetCoordinator.checkAndPerformDailyReset(
-                        attemptNtpSync = true
-                    )
-                    clockSnapshot = when (result) {
-                        is DailyResetResult.ResetPerformed -> result.snapshot
-                        is DailyResetResult.NoResetNeeded -> result.snapshot
+                val isPinScreenVisible = uiState.pendingProtectedAction != null ||
+                    uiState.destination == MainDestination.INITIAL_PIN_SETUP ||
+                    uiState.destination == MainDestination.CHANGE_PIN
+
+                LaunchedEffect(isPinScreenVisible) {
+                    if (isPinScreenVisible) {
+                        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                    } else {
+                        window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
                     }
                 }
 
-                BootstrapStatusScreen(
-                    isPinConfigured = isPinConfigured,
-                    trackedAppsCount = trackedApps.size,
-                    isAccessibilityActive = isAccessibilityRunning ||
-                        AccessibilityServiceState.isEnabledInSettings(this),
-                    clockSnapshot = clockSnapshot,
-                    onOpenAccessibilitySettings = {
-                        startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                BackHandler(
+                    enabled = uiState.pendingProtectedAction != null ||
+                        (uiState.destination != MainDestination.HOME &&
+                            uiState.destination != MainDestination.INITIAL_PIN_SETUP)
+                ) {
+                    if (uiState.pendingProtectedAction != null) {
+                        controller.cancelProtectedAction()
+                    } else {
+                        controller.navigateHome()
                     }
-                )
+                }
+
+                val pendingAction = uiState.pendingProtectedAction
+                if (pendingAction != null) {
+                    PinConfirmationScreen(
+                        action = pendingAction,
+                        pinLength = uiState.pinInput.length,
+                        pinError = uiState.pinError,
+                        isProcessing = uiState.isProcessing,
+                        onDigitClick = controller::onPinDigitPressed,
+                        onBackspaceClick = controller::onPinBackspacePressed,
+                        onClearClick = controller::onPinClearPressed,
+                        onConfirmClick = {
+                            scope.launch(Dispatchers.Default) {
+                                controller.submitProtectedActionPin()
+                            }
+                        },
+                        onCancelClick = controller::cancelProtectedAction
+                    )
+                } else {
+                    when (uiState.destination) {
+                        MainDestination.INITIAL_PIN_SETUP -> {
+                            InitialPinSetupScreen(
+                                uiState = uiState,
+                                onDigitClick = controller::onPinDigitPressed,
+                                onBackspaceClick = controller::onPinBackspacePressed,
+                                onClearClick = controller::onPinClearPressed,
+                                onConfirmClick = {
+                                    scope.launch(Dispatchers.Default) {
+                                        controller.submitInitialPinStep()
+                                    }
+                                },
+                                onRestartClick = controller::restartPinSetup
+                            )
+                        }
+
+                        MainDestination.HOME -> {
+                            HomeScreen(
+                                uiState = uiState,
+                                onAddAppClick = {
+                                    scope.launch {
+                                        controller.openAppPicker()
+                                    }
+                                },
+                                onEditAppClick = controller::openEditAppLimitDialog,
+                                onRemoveAppClick = controller::requestRemoveApp,
+                                onOpenPermissionsClick = {
+                                    refreshPermissionsStatus()
+                                    controller.openPermissionsGuide()
+                                },
+                                onOpenChangePinClick = controller::openChangePin,
+                                onDismissStatusMessage = controller::clearStatusMessage
+                            )
+                        }
+
+                        MainDestination.APP_PICKER -> {
+                            AppPickerScreen(
+                                uiState = uiState,
+                                onBackClick = controller::navigateHome,
+                                onSearchQueryChanged = controller::onAppSearchQueryChanged,
+                                onAppSelected = controller::openAddAppLimitDialog
+                            )
+                        }
+
+                        MainDestination.PERMISSIONS_GUIDE -> {
+                            PermissionsGuideScreen(
+                                status = uiState.permissionsStatus,
+                                onBackClick = controller::navigateHome,
+                                onOpenAccessibilitySettings = ::openAccessibilitySettings,
+                                onRequestNotificationsPermission = ::requestNotificationsOrOpenSettings,
+                                onRequestBatteryExemption = ::requestBatteryOptimizationExemption
+                            )
+                        }
+
+                        MainDestination.CHANGE_PIN -> {
+                            ChangePinScreen(
+                                uiState = uiState,
+                                onBackClick = controller::navigateHome,
+                                onDigitClick = controller::onPinDigitPressed,
+                                onBackspaceClick = controller::onPinBackspacePressed,
+                                onClearClick = controller::onPinClearPressed,
+                                onConfirmClick = {
+                                    scope.launch(Dispatchers.Default) {
+                                        controller.submitChangePinStep()
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+
+                val limitEditor = uiState.limitEditor
+                if (limitEditor != null) {
+                    LimitEditorDialog(
+                        state = limitEditor,
+                        onMinutesChanged = controller::onLimitMinutesInputChanged,
+                        onConfirm = controller::confirmLimitEditorAndRequestPin,
+                        onDismiss = controller::dismissLimitEditor
+                    )
+                }
             }
         }
     }
-}
 
-@Composable
-private fun BootstrapStatusScreen(
-    isPinConfigured: Boolean,
-    trackedAppsCount: Int,
-    isAccessibilityActive: Boolean,
-    clockSnapshot: TrustedTimeSnapshot?,
-    onOpenAccessibilitySettings: () -> Unit
-) {
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = "lograre",
-                style = MaterialTheme.typography.headlineMedium
-            )
-            Text(
-                text = if (isPinConfigured) {
-                    "PIN configurado correctamente."
-                } else {
-                    "PIN pendiente de configuración (Paso 5)."
-                },
-                style = MaterialTheme.typography.bodyLarge
-            )
-            Text(
-                text = "Apps supervisadas: $trackedAppsCount",
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Text(
-                text = if (isAccessibilityActive) {
-                    "Servicio de accesibilidad: Activo"
-                } else {
-                    "Servicio de accesibilidad: Inactivo"
-                },
-                style = MaterialTheme.typography.bodyMedium
-            )
-            if (!isAccessibilityActive) {
-                Button(onClick = onOpenAccessibilitySettings) {
-                    Text("Activar servicio de accesibilidad")
-                }
+    override fun onResume() {
+        super.onResume()
+        refreshPermissionsStatus()
+        val container = (application as LograreApplication).container
+        lifecycleScope.launch(Dispatchers.IO) {
+            container.dailyResetCoordinator.checkAndPerformDailyReset(attemptNtpSync = true)
+        }
+    }
+
+    private fun refreshPermissionsStatus() {
+        if (!::controller.isInitialized) return
+        controller.updatePermissionsStatus(PermissionStatusChecker.check(this))
+    }
+
+    private fun openAccessibilitySettings() {
+        startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+    }
+
+    private fun requestNotificationsOrOpenSettings() {
+        val status = PermissionStatusChecker.check(this)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !status.notificationsGranted) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
             }
-            val trustedTimeText = clockSnapshot?.let { snapshot ->
-                val localDateTime = Instant.ofEpochMilli(snapshot.utcMillis).atZone(snapshot.zoneId)
-                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z").format(localDateTime)
-            } ?: "Inicializando reloj de confianza..."
-            Text(
-                text = "Reloj de confianza: $trustedTimeText",
-                style = MaterialTheme.typography.bodyMedium
-            )
+            startActivity(intent)
+        }
+    }
+
+    @SuppressLint("BatteryLife")
+    private fun requestBatteryOptimizationExemption() {
+        val directIntent = Intent(
+            Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+            Uri.parse("package:$packageName")
+        )
+        try {
+            startActivity(directIntent)
+        } catch (_: Exception) {
+            startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
         }
     }
 }
