@@ -22,6 +22,8 @@ import com.lograre.app.domain.tracker.SystemPackageProvider
 import com.lograre.app.notification.AndroidFiveMinuteWarningNotifier
 import com.lograre.app.service.AndroidSystemPackageProvider
 import com.lograre.app.ui.lock.ActivityAppBlockLauncher
+import com.lograre.app.ui.theme.SharedPrefsThemeStorage
+import com.lograre.app.ui.theme.ThemePreferenceRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -66,6 +68,9 @@ class LograreContainer(application: Application) {
     )
 
     val appBlockLauncher: AppBlockLauncher = ActivityAppBlockLauncher(application)
+
+    val themePreferenceRepository: ThemePreferenceRepository =
+        ThemePreferenceRepository(SharedPrefsThemeStorage(application))
 
     private val androidWarningNotifier = AndroidFiveMinuteWarningNotifier(application)
     val warningNotifier: FiveMinuteWarningNotifier = androidWarningNotifier

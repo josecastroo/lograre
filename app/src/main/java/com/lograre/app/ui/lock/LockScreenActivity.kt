@@ -7,6 +7,7 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -42,7 +43,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.lograre.app.LograreApplication
 import com.lograre.app.ui.components.PinKeypad
-import com.lograre.app.ui.theme.LograreTheme
+import com.lograre.app.ui.theme.AppTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -58,6 +59,7 @@ class LockScreenActivity : ComponentActivity() {
     private var unlockedAndReturning: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
 
@@ -71,11 +73,12 @@ class LockScreenActivity : ComponentActivity() {
         val container = (application as LograreApplication).container
 
         setContent {
-            LograreTheme {
+            val themeMode by container.themePreferenceRepository.themeMode.collectAsState()
+            AppTheme(themeMode = themeMode) {
                 val activePackage = blockedPackageState
                 if (activePackage == null) {
                     LaunchedEffect(Unit) { goToLauncherAndFinish() }
-                    return@LograreTheme
+                    return@AppTheme
                 }
 
                 val appLabel = remember(activePackage) { resolveAppLabel(activePackage) }

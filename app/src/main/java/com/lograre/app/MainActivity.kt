@@ -11,6 +11,7 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -29,7 +30,7 @@ import com.lograre.app.ui.main.MainDestination
 import com.lograre.app.ui.main.MainScreenController
 import com.lograre.app.ui.main.PermissionsGuideScreen
 import com.lograre.app.ui.main.PinConfirmationScreen
-import com.lograre.app.ui.theme.LograreTheme
+import com.lograre.app.ui.theme.AppTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -44,6 +45,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         val container = (application as LograreApplication).container
 
@@ -70,7 +72,8 @@ class MainActivity : ComponentActivity() {
         refreshPermissionsStatus()
 
         setContent {
-            LograreTheme {
+            val themeMode by container.themePreferenceRepository.themeMode.collectAsState()
+            AppTheme(themeMode = themeMode) {
                 val uiState by controller.uiState.collectAsState()
                 val scope = rememberCoroutineScope()
 
