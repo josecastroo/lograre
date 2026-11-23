@@ -1,31 +1,43 @@
 package com.lograre.app.ui.main
 
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.lograre.app.R
 import com.lograre.app.service.AppPermissionsStatus
+import com.lograre.app.ui.components.GlassCard
+import com.lograre.app.ui.components.ZenBackground
+import com.lograre.app.ui.components.ZenButton
+import com.lograre.app.ui.components.ZenButtonStyle
+import com.lograre.app.ui.components.ZenTextButton
+import com.lograre.app.ui.theme.AppTheme
+import com.lograre.app.ui.theme.LocalZenPalette
+import com.lograre.app.ui.theme.LocalZenTypography
+import com.lograre.app.ui.theme.ThemeMode
+import com.lograre.app.ui.theme.ZenDimens
+import com.lograre.app.ui.theme.ZenShapes
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PermissionsGuideScreen(
     status: AppPermissionsStatus,
@@ -34,56 +46,80 @@ fun PermissionsGuideScreen(
     onRequestNotificationsPermission: () -> Unit,
     onRequestBatteryExemption: () -> Unit
 ) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Guía de permisos") },
-                navigationIcon = {
-                    TextButton(onClick = onBackClick) {
-                        Text("Volver")
-                    }
-                }
-            )
-        }
-    ) { innerPadding ->
+    val palette = LocalZenPalette.current
+    val typo = LocalZenTypography.current
+
+    ZenBackground {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .statusBarsPadding()
+                .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(
+                    horizontal = ZenDimens.ScreenHorizontalPadding,
+                    vertical = ZenDimens.Space16
+                ),
+            verticalArrangement = Arrangement.spacedBy(ZenDimens.Space16)
         ) {
-            Text(
-                text = "Configura estos permisos para que lograre funcione de forma fiable en segundo plano.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+            ZenTextButton(
+                text = stringResource(R.string.action_back),
+                onClick = onBackClick,
+                color = palette.textSecondary
             )
 
-            PermissionCard(
-                title = "1. Servicio de accesibilidad (Obligatorio)",
-                description = "Permite detectar qué aplicación está en primer plano para contar el tiempo diario y mostrar la pantalla de PIN al agotarse. Busca \"lograre - Control de tiempo\" y actívalo.",
+            Column(verticalArrangement = Arrangement.spacedBy(ZenDimens.Space8)) {
+                Text(
+                    text = stringResource(R.string.permissions_title),
+                    style = typo.title,
+                    color = palette.text
+                )
+                Text(
+                    text = stringResource(R.string.permissions_subtitle),
+                    style = typo.body,
+                    color = palette.textSecondary
+                )
+            }
+
+            PermissionStepCard(
+                stepNumber = 1,
+                iconRes = R.drawable.ic_zen_accessibility,
+                title = stringResource(R.string.perm_accessibility_title),
+                description = stringResource(R.string.perm_accessibility_desc),
                 isGranted = status.accessibilityEnabled,
-                actionLabel = if (status.accessibilityEnabled) "Revisar en Ajustes" else "Activar accesibilidad",
-                isPrimaryAction = !status.accessibilityEnabled,
+                actionLabel = if (status.accessibilityEnabled) {
+                    stringResource(R.string.perm_accessibility_action_review)
+                } else {
+                    stringResource(R.string.perm_accessibility_action_enable)
+                },
                 onActionClick = onOpenAccessibilitySettings
             )
 
-            PermissionCard(
-                title = "2. Notificaciones (Android 13+)",
-                description = "Necesario para mostrarte el aviso cuando falten 5 minutos para agotar el límite diario de una aplicación.",
+            PermissionStepCard(
+                stepNumber = 2,
+                iconRes = R.drawable.ic_zen_notifications,
+                title = stringResource(R.string.perm_notifications_title),
+                description = stringResource(R.string.perm_notifications_desc),
                 isGranted = status.notificationsGranted,
-                actionLabel = if (status.notificationsGranted) "Ajustes de notificaciones" else "Permitir notificaciones",
-                isPrimaryAction = !status.notificationsGranted,
+                actionLabel = if (status.notificationsGranted) {
+                    stringResource(R.string.perm_notifications_action_review)
+                } else {
+                    stringResource(R.string.perm_notifications_action_enable)
+                },
                 onActionClick = onRequestNotificationsPermission
             )
 
-            PermissionCard(
-                title = "3. Exclusión de optimización de batería (Recomendada)",
-                description = "Evita que Android cierre o suspenda el servicio de conteo en segundo plano cuando ahorra batería.",
+            PermissionStepCard(
+                stepNumber = 3,
+                iconRes = R.drawable.ic_zen_battery,
+                title = stringResource(R.string.perm_battery_title),
+                description = stringResource(R.string.perm_battery_desc),
                 isGranted = status.batteryOptimizationIgnored,
-                actionLabel = if (status.batteryOptimizationIgnored) "Revisar batería" else "Excluir de optimización",
-                isPrimaryAction = !status.batteryOptimizationIgnored,
+                actionLabel = if (status.batteryOptimizationIgnored) {
+                    stringResource(R.string.perm_battery_action_review)
+                } else {
+                    stringResource(R.string.perm_battery_action_enable)
+                },
                 onActionClick = onRequestBatteryExemption
             )
         }
@@ -91,65 +127,117 @@ fun PermissionsGuideScreen(
 }
 
 @Composable
-private fun PermissionCard(
+private fun PermissionStepCard(
+    stepNumber: Int,
+    @DrawableRes iconRes: Int,
     title: String,
     description: String,
     isGranted: Boolean,
     actionLabel: String,
-    isPrimaryAction: Boolean,
     onActionClick: () -> Unit
 ) {
-    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
+    val palette = LocalZenPalette.current
+    val typo = LocalZenTypography.current
+
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(ZenDimens.Space12)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(ZenDimens.Space12),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f)
-                )
-                Surface(
-                    color = if (isGranted) {
-                        MaterialTheme.colorScheme.primaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.errorContainer
-                    },
-                    shape = RoundedCornerShape(16.dp)
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(
+                            color = if (isGranted) palette.accent else palette.accent2,
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(iconRes),
+                        contentDescription = null,
+                        tint = if (isGranted) palette.onAccent else palette.onAccent2,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "$stepNumber. $title",
+                        style = typo.subtitle,
+                        color = palette.text
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .background(
+                            color = if (isGranted) palette.accent else palette.accent2,
+                            shape = ZenShapes.Pill
+                        )
+                        .padding(horizontal = ZenDimens.Space12, vertical = ZenDimens.Space4)
                 ) {
                     Text(
-                        text = if (isGranted) "Activo" else "Pendiente",
-                        color = if (isGranted) {
-                            MaterialTheme.colorScheme.onPrimaryContainer
+                        text = if (isGranted) {
+                            stringResource(R.string.permissions_status_active)
                         } else {
-                            MaterialTheme.colorScheme.onErrorContainer
+                            stringResource(R.string.permissions_status_pending)
                         },
-                        style = MaterialTheme.typography.labelMedium,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        style = typo.label,
+                        color = if (isGranted) palette.onAccent else palette.onAccent2
                     )
                 }
             }
 
             Text(
                 text = description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = typo.body,
+                color = palette.textSecondary
             )
 
-            if (isPrimaryAction) {
-                Button(onClick = onActionClick) {
-                    Text(actionLabel)
-                }
-            } else {
-                OutlinedButton(onClick = onActionClick) {
-                    Text(actionLabel)
-                }
-            }
+            ZenButton(
+                text = actionLabel,
+                onClick = onActionClick,
+                style = if (isGranted) ZenButtonStyle.SECONDARY else ZenButtonStyle.PRIMARY
+            )
         }
+    }
+}
+
+@Preview(name = "Permisos — Claro", showBackground = true, widthDp = 380, heightDp = 760)
+@Composable
+private fun PermissionsGuideLightPreview() {
+    AppTheme(themeMode = ThemeMode.LIGHT) {
+        PermissionsGuideScreen(
+            status = AppPermissionsStatus(
+                accessibilityEnabled = true,
+                notificationsGranted = false,
+                batteryOptimizationIgnored = false
+            ),
+            onBackClick = {},
+            onOpenAccessibilitySettings = {},
+            onRequestNotificationsPermission = {},
+            onRequestBatteryExemption = {}
+        )
+    }
+}
+
+@Preview(name = "Permisos — Oscuro", showBackground = true, widthDp = 380, heightDp = 760)
+@Composable
+private fun PermissionsGuideDarkPreview() {
+    AppTheme(themeMode = ThemeMode.DARK) {
+        PermissionsGuideScreen(
+            status = AppPermissionsStatus(
+                accessibilityEnabled = false,
+                notificationsGranted = true,
+                batteryOptimizationIgnored = true
+            ),
+            onBackClick = {},
+            onOpenAccessibilitySettings = {},
+            onRequestNotificationsPermission = {},
+            onRequestBatteryExemption = {}
+        )
     }
 }
