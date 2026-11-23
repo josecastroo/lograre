@@ -4,7 +4,6 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.State
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
@@ -19,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
@@ -189,23 +189,24 @@ fun WaterLevelIndicator(
 
         val amplitudePx = WAVE_AMPLITUDE_DP.dp.toPx()
         val wavelengthPx = WAVE_LENGTH_DP.dp.toPx()
-        val phase = wavePhase.value
+        val phase: Float = wavePhase.value
 
         val path = Path().apply {
             moveTo(0f, height)
-            val startY = waterTopY + amplitudePx * sin(phase)
+            val startY = (waterTopY + amplitudePx * sin(phase.toDouble()).toFloat())
+                .coerceIn(0f, height)
             lineTo(0f, startY)
 
             val stepPx = 4f
             var x = stepPx
             while (x <= width) {
-                val angle = (x / wavelengthPx) * (2.0 * PI).toFloat() + phase
-                val y = (waterTopY + amplitudePx * sin(angle)).coerceIn(0f, height)
+                val angle = (x / wavelengthPx) * (2.0 * PI) + phase.toDouble()
+                val y = (waterTopY + amplitudePx * sin(angle).toFloat()).coerceIn(0f, height)
                 lineTo(x, y)
                 x += stepPx
             }
-            val endAngle = (width / wavelengthPx) * (2.0 * PI).toFloat() + phase
-            lineTo(width, (waterTopY + amplitudePx * sin(endAngle)).coerceIn(0f, height))
+            val endAngle = (width / wavelengthPx) * (2.0 * PI) + phase.toDouble()
+            lineTo(width, (waterTopY + amplitudePx * sin(endAngle).toFloat()).coerceIn(0f, height))
             lineTo(width, height)
             close()
         }
