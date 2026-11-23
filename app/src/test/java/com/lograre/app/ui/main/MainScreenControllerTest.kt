@@ -134,6 +134,7 @@ class MainScreenControllerTest {
 
         val instagram = InstalledAppInfo("com.instagram.android", "Instagram")
         h.controller.openAddAppLimitDialog(instagram)
+        assertEquals("", h.controller.uiState.value.limitEditor!!.minutesInput)
         h.controller.onLimitMinutesInputChanged("0")
         assertTrue(h.controller.confirmLimitEditorAndRequestPin())
         assertTrue(h.controller.uiState.value.pendingProtectedAction is PendingProtectedAction.AddApp)

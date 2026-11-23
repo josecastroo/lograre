@@ -615,6 +615,6 @@ class MainScreenController(
     }
 
     companion object {
-        private const val DEFAULT_NEW_LIMIT_MINUTES = "30"
+        private const val DEFAULT_NEW_LIMIT_MINUTES = ""
     }
 }
