@@ -3,4 +3,61 @@
     <string name="app_name">lograre</string>
     <string name="accessibility_service_label">lograre - Control de tiempo</string>
     <string name="accessibility_service_description">Detecta qué aplicación está en primer plano para contar su tiempo de uso diario y mostrar la pantalla de PIN al agotarse el límite. No lee contenido de pantalla ni contraseñas.</string>
+
+    <!-- Saludos de pantalla principal -->
+    <string name="greeting_morning">Buenos días</string>
+    <string name="greeting_afternoon">Buenas tardes</string>
+    <string name="greeting_evening">Buenas noches</string>
+
+    <!-- Pantalla principal -->
+    <string name="home_summary_available_one">1 app con tiempo disponible hoy</string>
+    <string name="home_summary_available_many">%1$d apps con tiempo disponible hoy</string>
+    <string name="home_summary_all_paused">Todas tus apps están en pausa por hoy</string>
+    <string name="home_summary_empty">Un espacio tranquilo para cuidar tu atención</string>
+    <string name="home_empty_message">Aún no has elegido ninguna app. Empieza por la que más tiempo te quita.</string>
+    <string name="home_add_app">Añadir app</string>
+    <string name="home_accessibility_needed_title">Activa el permiso de accesibilidad</string>
+    <string name="home_accessibility_needed_body">Es necesario para medir el tiempo en primer plano y acompañarte cuando toque pausar.</string>
+    <string name="home_open_permissions">Guía de permisos</string>
+    <string name="home_settings_cd">Abrir apariencia y opciones</string>
+
+    <!-- Estados y nivel de agua -->
+    <string name="status_paused">En pausa</string>
+    <string name="status_free_today">Libre hoy</string>
+    <string name="app_usage_summary">%1$s de %2$s</string>
+    <string name="app_usage_summary_with_extra">%1$s de %2$s (+%3$d min)</string>
+    <string name="water_cd_remaining">%1$s, quedan %2$d de %3$d minutos</string>
+    <string name="water_cd_paused">%1$s, en pausa</string>
+    <string name="water_cd_free_today">%1$s, libre hoy</string>
+
+    <!-- Acciones de app y edición de límite -->
+    <string name="adjust_time">Ajustar tiempo</string>
+    <string name="remove_app">Quitar de la lista</string>
+    <string name="dialog_add_app_title">Añadir %1$s</string>
+    <string name="dialog_limit_hint">Define el límite diario en minutos. Con 0 se pedirá el PIN desde el primer intento.</string>
+    <string name="dialog_limit_label">Minutos diarios</string>
+    <string name="action_continue_with_pin">Continuar con PIN</string>
+    <string name="action_cancel">Cancelar</string>
+    <string name="action_back">Volver</string>
+
+    <!-- Hoja Apariencia -->
+    <string name="appearance_title">Apariencia</string>
+    <string name="theme_mode_system">Sistema</string>
+    <string name="theme_mode_light">Claro</string>
+    <string name="theme_mode_dark">Oscuro</string>
+    <string name="settings_permissions_item">Guía de permisos</string>
+    <string name="settings_permissions_pending">Pendiente</string>
+    <string name="settings_change_pin_item">Cambiar PIN</string>
+
+    <!-- Pantalla de bloqueo y PIN (base compartida en strings.xml) -->
+    <string name="lock_title">Tu tiempo en %1$s terminó por hoy.</string>
+    <string name="lock_subtitle">Respira un momento.</string>
+    <string name="breath_inhale">Inhala</string>
+    <string name="breath_exhale">Exhala</string>
+    <string name="pin_incorrect">Ese no es el código. Respira e inténtalo de nuevo.</string>
+    <string name="pin_setup_title">Elige un PIN</string>
+    <string name="pin_setup_subtitle">Pide a alguien de confianza que lo escriba por ti.</string>
+    <string name="pin_setup_confirm">Escríbelo otra vez</string>
+    <string name="action_exit">Salir</string>
+    <string name="warning_five_minutes_title">Te quedan 5 minutos en %1$s.</string>
 </resources>
