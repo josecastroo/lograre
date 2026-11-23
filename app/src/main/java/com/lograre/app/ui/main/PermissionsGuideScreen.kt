@@ -27,10 +27,10 @@ import androidx.compose.ui.unit.dp
 import com.lograre.app.R
 import com.lograre.app.service.AppPermissionsStatus
 import com.lograre.app.ui.components.GlassCard
+import com.lograre.app.ui.components.ZenBackButton
 import com.lograre.app.ui.components.ZenBackground
 import com.lograre.app.ui.components.ZenButton
 import com.lograre.app.ui.components.ZenButtonStyle
-import com.lograre.app.ui.components.ZenTextButton
 import com.lograre.app.ui.theme.AppTheme
 import com.lograre.app.ui.theme.LocalZenPalette
 import com.lograre.app.ui.theme.LocalZenTypography
@@ -62,18 +62,20 @@ fun PermissionsGuideScreen(
                 ),
             verticalArrangement = Arrangement.spacedBy(ZenDimens.Space16)
         ) {
-            ZenTextButton(
-                text = stringResource(R.string.action_back),
-                onClick = onBackClick,
-                color = palette.textSecondary
-            )
-
             Column(verticalArrangement = Arrangement.spacedBy(ZenDimens.Space8)) {
-                Text(
-                    text = stringResource(R.string.permissions_title),
-                    style = typo.title,
-                    color = palette.text
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(ZenDimens.Space12),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    ZenBackButton(onClick = onBackClick)
+                    Text(
+                        text = stringResource(R.string.permissions_title),
+                        style = typo.title,
+                        color = palette.text,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
                 Text(
                     text = stringResource(R.string.permissions_subtitle),
                     style = typo.body,

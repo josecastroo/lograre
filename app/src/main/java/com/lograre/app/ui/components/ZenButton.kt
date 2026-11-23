@@ -12,6 +12,9 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -20,12 +23,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import com.lograre.app.R
 import com.lograre.app.ui.theme.AppTheme
 import com.lograre.app.ui.theme.LocalZenPalette
 import com.lograre.app.ui.theme.LocalZenTypography
@@ -99,6 +106,42 @@ fun ZenButton(
             textAlign = TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+/**
+ * Circular 48 dp translucent back arrow button matching the top settings icon.
+ */
+@Composable
+fun ZenBackButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
+) {
+    val palette = LocalZenPalette.current
+    val backLabel = stringResource(R.string.action_back)
+
+    Box(
+        modifier = modifier
+            .size(ZenDimens.MinTouchTarget)
+            .alpha(if (enabled) 1f else 0.45f)
+            .clip(CircleShape)
+            .background(palette.surface, CircleShape)
+            .border(ZenDimens.BorderWidth, palette.border, CircleShape)
+            .waterRipple(
+                enabled = enabled,
+                onClickLabel = backLabel,
+                role = Role.Button,
+                onClick = onClick
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_zen_arrow_back),
+            contentDescription = backLabel,
+            tint = palette.text,
+            modifier = Modifier.size(22.dp)
         )
     }
 }

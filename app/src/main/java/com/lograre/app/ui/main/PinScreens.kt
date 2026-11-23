@@ -21,6 +21,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import com.lograre.app.R
 import com.lograre.app.ui.components.PinKeypad
+import com.lograre.app.ui.components.ZenBackButton
 import com.lograre.app.ui.components.ZenBackground
 import com.lograre.app.ui.components.ZenTextButton
 import com.lograre.app.ui.theme.AppTheme
@@ -147,11 +148,9 @@ fun ChangePinScreen(
             verticalArrangement = Arrangement.spacedBy(ZenDimens.Space16)
         ) {
             Box(modifier = Modifier.fillMaxWidth()) {
-                ZenTextButton(
-                    text = stringResource(R.string.action_back),
+                ZenBackButton(
                     onClick = onBackClick,
                     enabled = !uiState.isProcessing,
-                    color = palette.textSecondary,
                     modifier = Modifier.align(Alignment.CenterStart)
                 )
             }
