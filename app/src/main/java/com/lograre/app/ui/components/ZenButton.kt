@@ -111,7 +111,7 @@ fun ZenButton(
 }
 
 /**
- * Circular 48 dp translucent back arrow button matching the top settings icon.
+ * Minimal 48 dp back arrow icon button with waterRipple and no background circle.
  */
 @Composable
 fun ZenBackButton(
@@ -127,8 +127,6 @@ fun ZenBackButton(
             .size(ZenDimens.MinTouchTarget)
             .alpha(if (enabled) 1f else 0.45f)
             .clip(CircleShape)
-            .background(palette.surface, CircleShape)
-            .border(ZenDimens.BorderWidth, palette.border, CircleShape)
             .waterRipple(
                 enabled = enabled,
                 onClickLabel = backLabel,
@@ -141,7 +139,7 @@ fun ZenBackButton(
             painter = painterResource(R.drawable.ic_zen_arrow_back),
             contentDescription = backLabel,
             tint = palette.text,
-            modifier = Modifier.size(22.dp)
+            modifier = Modifier.size(24.dp)
         )
     }
 }
