@@ -8,13 +8,18 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.Crossfade
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -448,16 +453,36 @@ internal fun LockScreenContent(
                         stringResource(R.string.lock_subtitle)
                     }
                 }
-                Crossfade(
+                AnimatedContent(
                     targetState = subtitleText,
-                    animationSpec = tween(durationMillis = if (animationsEnabled) 300 else 0),
-                    label = "lock_subtitle_crossfade"
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center,
+                    transitionSpec = {
+                        if (!animationsEnabled) {
+                            EnterTransition.None togetherWith ExitTransition.None
+                        } else {
+                            fadeIn(
+                                animationSpec = tween(
+                                    durationMillis = 260,
+                                    delayMillis = 140,
+                                    easing = FastOutSlowInEasing
+                                )
+                            ) togetherWith fadeOut(
+                                animationSpec = tween(
+                                    durationMillis = 140,
+                                    easing = FastOutSlowInEasing
+                                )
+                            ) using SizeTransform(clip = false)
+                        }
+                    },
+                    label = "lock_subtitle_transition"
                 ) { textValue ->
                     Text(
                         text = textValue,
                         style = typo.body,
                         color = palette.textSecondary,
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
