@@ -36,6 +36,7 @@
     <string name="dialog_add_app_title">Añadir %1$s</string>
     <string name="dialog_limit_hint">Define el límite diario en minutos. Con 0 se pedirá el PIN desde el primer intento.</string>
     <string name="dialog_limit_label">Minutos diarios</string>
+    <string name="action_add_app_confirm">Añadir</string>
     <string name="action_continue_with_pin">Continuar con PIN</string>
     <string name="action_cancel">Cancelar</string>
     <string name="action_back">Volver</string>

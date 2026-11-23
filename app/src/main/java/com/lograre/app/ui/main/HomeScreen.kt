@@ -609,7 +609,11 @@ fun LimitEditorDialog(
             }
 
             ZenButton(
-                text = stringResource(R.string.action_continue_with_pin),
+                text = if (state.isNewApp) {
+                    stringResource(R.string.action_add_app_confirm)
+                } else {
+                    stringResource(R.string.action_continue_with_pin)
+                },
                 onClick = onConfirm,
                 style = ZenButtonStyle.PRIMARY
             )

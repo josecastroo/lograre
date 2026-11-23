@@ -481,7 +481,7 @@ class MainScreenController(
         _uiState.update { it.copy(limitEditor = null) }
     }
 
-    fun confirmLimitEditorAndRequestPin(): Boolean {
+    suspend fun confirmLimitEditor(): Boolean {
         val editor = _uiState.value.limitEditor ?: return false
         val minutes = editor.minutesInput.toIntOrNull()
         if (minutes == null || minutes < 0) {
@@ -491,19 +491,46 @@ class MainScreenController(
             return false
         }
 
-        val action = if (editor.isNewApp) {
-            PendingProtectedAction.AddApp(
-                packageName = editor.packageName,
-                appLabel = editor.appLabel,
-                dailyLimitMinutes = minutes
-            )
-        } else {
-            PendingProtectedAction.EditAppLimit(
-                packageName = editor.packageName,
-                appLabel = editor.appLabel,
-                newLimitMinutes = minutes
-            )
+        if (editor.isNewApp) {
+            _uiState.update { it.copy(isProcessing = true) }
+            return try {
+                val resetResult = dailyResetCoordinator.checkAndPerformDailyReset()
+                val (dayId, nowUtc) = when (resetResult) {
+                    is DailyResetResult.ResetPerformed -> resetResult.newDayId to resetResult.snapshot.utcMillis
+                    is DailyResetResult.NoResetNeeded -> resetResult.currentDayId to resetResult.snapshot.utcMillis
+                }
+                appLimitRepository.addOrUpdateApp(
+                    packageName = editor.packageName,
+                    dailyLimitMinutes = minutes,
+                    currentDayId = dayId,
+                    nowMillis = nowUtc
+                )
+                _uiState.update {
+                    it.copy(
+                        destination = MainDestination.HOME,
+                        limitEditor = null,
+                        pendingProtectedAction = null,
+                        isProcessing = false,
+                        statusMessage = "${editor.appLabel} añadida (${DurationFormatter.formatMinutes(minutes)})"
+                    )
+                }
+                true
+            } catch (_: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isProcessing = false,
+                        limitEditor = editor.copy(error = "No se pudo añadir la aplicación")
+                    )
+                }
+                false
+            }
         }
+
+        val action = PendingProtectedAction.EditAppLimit(
+            packageName = editor.packageName,
+            appLabel = editor.appLabel,
+            newLimitMinutes = minutes
+        )
 
         _uiState.update {
             it.copy(

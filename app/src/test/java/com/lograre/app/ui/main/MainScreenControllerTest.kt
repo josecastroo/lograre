@@ -124,7 +124,7 @@ class MainScreenControllerTest {
     }
 
     @Test
-    fun `adding app requires PIN verification and allows 0 minute limit`() = runTest {
+    fun `adding new app saves directly without PIN and allows 0 minute limit`() = runTest {
         val h = Harness(initialPin = "2468")
         assertEquals(MainDestination.HOME, h.controller.uiState.value.destination)
 
@@ -136,18 +136,9 @@ class MainScreenControllerTest {
         h.controller.openAddAppLimitDialog(instagram)
         assertEquals("", h.controller.uiState.value.limitEditor!!.minutesInput)
         h.controller.onLimitMinutesInputChanged("0")
-        assertTrue(h.controller.confirmLimitEditorAndRequestPin())
-        assertTrue(h.controller.uiState.value.pendingProtectedAction is PendingProtectedAction.AddApp)
+        assertTrue(h.controller.confirmLimitEditor())
 
-        // Wrong PIN does not add app
-        h.typePin("0000")
-        assertFalse(h.controller.submitProtectedActionPin())
-        assertNull(h.appRepo.getApp(instagram.packageName))
-        assertNotNull(h.controller.uiState.value.pinError)
-
-        // Right PIN adds app with limit 0
-        h.typePin("2468")
-        assertTrue(h.controller.submitProtectedActionPin())
+        assertNull(h.controller.uiState.value.pendingProtectedAction)
         val saved = h.appRepo.getApp(instagram.packageName)!!
         assertEquals(0, saved.dailyLimitMinutes)
         assertTrue(saved.isBlocked)
@@ -165,7 +156,8 @@ class MainScreenControllerTest {
         val currentApp = h.appRepo.getApp(youtube)!!
         h.controller.openEditAppLimitDialog(currentApp)
         h.controller.onLimitMinutesInputChanged("45")
-        assertTrue(h.controller.confirmLimitEditorAndRequestPin())
+        assertTrue(h.controller.confirmLimitEditor())
+        assertTrue(h.controller.uiState.value.pendingProtectedAction is PendingProtectedAction.EditAppLimit)
 
         h.typePin("5555")
         assertTrue(h.controller.submitProtectedActionPin())

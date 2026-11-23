@@ -290,7 +290,17 @@ class MainActivity : ComponentActivity() {
                     LimitEditorDialog(
                         state = limitEditor,
                         onMinutesChanged = controller::onLimitMinutesInputChanged,
-                        onConfirm = controller::confirmLimitEditorAndRequestPin,
+                        onConfirm = {
+                            val wasNewApp = limitEditor.isNewApp
+                            scope.launch(Dispatchers.IO) {
+                                val ok = controller.confirmLimitEditor()
+                                if (ok && wasNewApp) {
+                                    withContext(Dispatchers.Main) {
+                                        ZenHaptics.confirm(view)
+                                    }
+                                }
+                            }
+                        },
                         onDismiss = controller::dismissLimitEditor
                     )
                 }
