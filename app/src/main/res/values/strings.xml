@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">lograre</string>
+    <string name="accessibility_service_label">lograre - Control de tiempo</string>
+    <string name="accessibility_service_description">Detecta qué aplicación está en primer plano para contar su tiempo de uso diario y mostrar la pantalla de PIN al agotarse el límite. No lee contenido de pantalla ni contraseñas.</string>
 </resources>
