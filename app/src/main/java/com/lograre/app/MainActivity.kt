@@ -330,6 +330,21 @@ class MainActivity : ComponentActivity() {
 
     @SuppressLint("BatteryLife")
     private fun requestBatteryOptimizationExemption() {
+        val status = PermissionStatusChecker.check(this)
+        val appDetailsIntent = Intent(
+            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+            Uri.parse("package:$packageName")
+        )
+
+        if (status.batteryOptimizationIgnored) {
+            try {
+                startActivity(appDetailsIntent)
+            } catch (_: Exception) {
+                startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+            }
+            return
+        }
+
         val directIntent = Intent(
             Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
             Uri.parse("package:$packageName")
@@ -337,7 +352,11 @@ class MainActivity : ComponentActivity() {
         try {
             startActivity(directIntent)
         } catch (_: Exception) {
-            startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+            try {
+                startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+            } catch (_: Exception) {
+                startActivity(appDetailsIntent)
+            }
         }
     }
 }
