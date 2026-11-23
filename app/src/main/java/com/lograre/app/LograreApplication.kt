@@ -18,6 +18,7 @@ import com.lograre.app.domain.tracker.FiveMinuteWarningNotifier
 import com.lograre.app.domain.tracker.ForegroundUsageTracker
 import com.lograre.app.domain.tracker.SystemPackageProvider
 import com.lograre.app.service.AndroidSystemPackageProvider
+import com.lograre.app.ui.lock.ActivityAppBlockLauncher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -52,10 +53,7 @@ class LograreContainer(application: Application) {
         protectedPackagesProvider = { systemPackageProvider.getProtectedPackages() }
     )
 
-    // Replaced with LockScreenActivity launcher in Step 4.
-    val appBlockLauncher: AppBlockLauncher = AppBlockLauncher { packageName ->
-        Log.i(TAG, "Block triggered for package: $packageName")
-    }
+    val appBlockLauncher: AppBlockLauncher = ActivityAppBlockLauncher(application)
 
     // Replaced with real NotificationManager alert in Step 6.
     val warningNotifier: FiveMinuteWarningNotifier = FiveMinuteWarningNotifier { packageName, remainingMillis ->
