@@ -36,3 +36,4 @@ App nativa de Android (Kotlin + Jetpack Compose) de uso personal para limitar el
 
 - **Paso 1:** Estructura Android/Gradle, Compose, Room (`tracked_apps` y `trusted_clock_state`), exclusión total de backup en la nube, `<queries>` para Android 11+, almacenamiento seguro de PIN (`PBKDF2WithHmacSHA256` + Android Keystore AES-256-GCM) y pruebas unitarias.
 - **Paso 2:** Reloj de confianza anti-trampa (`TrustedClock`), cliente SNTP (`SntpClient`), coordinador de reinicio diario a las `00:00` (`DailyResetCoordinator`), `TimeChangeReceiver` (`TIME_SET` y `TIMEZONE_CHANGED`) y pruebas unitarias.
+- **Paso 3:** `LograreAccessibilityService` (`TYPE_WINDOW_STATE_CHANGED`, sin lectura de contenido de ventana), `ForegroundUsageTracker` basado en `elapsedRealtime`, protección de apps críticas/teclados/SystemUI, pausa en apagado de pantalla y pruebas unitarias del contador.

@@ -1,6 +1,7 @@
 package com.lograre.app
 
 import android.app.Application
+import android.util.Log
 import com.lograre.app.data.local.LograreDatabase
 import com.lograre.app.data.network.SntpClient
 import com.lograre.app.data.repository.AppLimitRepository
@@ -12,6 +13,11 @@ import com.lograre.app.domain.clock.DailyResetCoordinator
 import com.lograre.app.domain.clock.DeviceClock
 import com.lograre.app.domain.clock.NtpTimeProvider
 import com.lograre.app.domain.clock.TrustedClock
+import com.lograre.app.domain.tracker.AppBlockLauncher
+import com.lograre.app.domain.tracker.FiveMinuteWarningNotifier
+import com.lograre.app.domain.tracker.ForegroundUsageTracker
+import com.lograre.app.domain.tracker.SystemPackageProvider
+import com.lograre.app.service.AndroidSystemPackageProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -37,6 +43,28 @@ class LograreContainer(application: Application) {
         trustedClock = trustedClock,
         appLimitRepository = appLimitRepository
     )
+
+    val systemPackageProvider: SystemPackageProvider = AndroidSystemPackageProvider(application)
+    val foregroundUsageTracker: ForegroundUsageTracker = ForegroundUsageTracker(
+        deviceClock = deviceClock,
+        appLimitRepository = appLimitRepository,
+        dailyResetCoordinator = dailyResetCoordinator,
+        protectedPackagesProvider = { systemPackageProvider.getProtectedPackages() }
+    )
+
+    // Replaced with LockScreenActivity launcher in Step 4.
+    val appBlockLauncher: AppBlockLauncher = AppBlockLauncher { packageName ->
+        Log.i(TAG, "Block triggered for package: $packageName")
+    }
+
+    // Replaced with real NotificationManager alert in Step 6.
+    val warningNotifier: FiveMinuteWarningNotifier = FiveMinuteWarningNotifier { packageName, remainingMillis ->
+        Log.i(TAG, "5-minute warning for $packageName (remaining=${remainingMillis}ms)")
+    }
+
+    companion object {
+        private const val TAG = "LograreContainer"
+    }
 }
 
 class LograreApplication : Application() {
