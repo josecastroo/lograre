@@ -221,25 +221,14 @@ private fun PickerAppCard(
                 size = ZenDimens.AppIconSize
             )
 
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(ZenDimens.Space4)
-            ) {
-                Text(
-                    text = app.label,
-                    style = typo.subtitle,
-                    color = palette.text,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = app.packageName,
-                    style = typo.label,
-                    color = palette.textSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+            Text(
+                text = app.label,
+                style = typo.subtitle,
+                color = palette.text,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
 
             Box(
                 modifier = Modifier
