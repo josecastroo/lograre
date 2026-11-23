@@ -94,6 +94,11 @@ fun HomeScreen(
 
     var showAppearanceSheet by remember { mutableStateOf(false) }
     var selectedAppForActions by remember { mutableStateOf<TrackedApp?>(null) }
+    var displayedStatusMessage by remember { mutableStateOf("") }
+
+    if (uiState.statusMessage != null) {
+        displayedStatusMessage = uiState.statusMessage
+    }
 
     val greetingResId = remember {
         HomeGreeting.greetingResIdForHour(LocalTime.now().hour)
@@ -176,9 +181,8 @@ fun HomeScreen(
                 AnimatedVisibility(
                     visible = uiState.statusMessage != null,
                     enter = fadeIn(tween(if (animationsEnabled) 250 else 0)),
-                    exit = fadeOut(tween(if (animationsEnabled) 250 else 0))
+                    exit = fadeOut(tween(if (animationsEnabled) 300 else 0))
                 ) {
-                    val message = uiState.statusMessage.orEmpty()
                     GlassCard(
                         shape = ZenShapes.Pill,
                         contentPadding = PaddingValues(
@@ -187,7 +191,7 @@ fun HomeScreen(
                         )
                     ) {
                         Text(
-                            text = message,
+                            text = displayedStatusMessage,
                             style = typo.body,
                             color = palette.text
                         )
