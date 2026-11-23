@@ -116,7 +116,7 @@ fun HomeScreen(
                     start = ZenDimens.ScreenHorizontalPadding,
                     end = ZenDimens.ScreenHorizontalPadding,
                     top = ZenDimens.Space24,
-                    bottom = 120.dp
+                    bottom = 136.dp
                 ),
                 verticalArrangement = Arrangement.spacedBy(ZenDimens.AppCardSpacing)
             ) {
@@ -670,6 +670,30 @@ private fun HomeScreenDarkPreview() {
         HomeScreen(
             uiState = sampleHomeUiState(),
             currentThemeMode = ThemeMode.DARK,
+            onSelectThemeMode = {},
+            onAddAppClick = {},
+            onEditAppClick = {},
+            onRemoveAppClick = {},
+            onOpenPermissionsClick = {},
+            onOpenChangePinClick = {},
+            onDismissStatusMessage = {}
+        )
+    }
+}
+
+@Preview(
+    name = "HomeScreen 200% — Claro",
+    showBackground = true,
+    widthDp = 380,
+    heightDp = 760,
+    fontScale = 2.0f
+)
+@Composable
+private fun HomeScreenLargeFontPreview() {
+    AppTheme(themeMode = ThemeMode.LIGHT) {
+        HomeScreen(
+            uiState = sampleHomeUiState(),
+            currentThemeMode = ThemeMode.LIGHT,
             onSelectThemeMode = {},
             onAddAppClick = {},
             onEditAppClick = {},

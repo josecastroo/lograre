@@ -16,6 +16,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -443,6 +445,7 @@ internal fun LockScreenContent(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun UnlockedOptionsSection(
     uiState: LockScreenUiState,
@@ -455,6 +458,7 @@ private fun UnlockedOptionsSection(
     val palette = LocalZenPalette.current
     val typo = LocalZenTypography.current
     val animationsEnabled = rememberAnimationsEnabled()
+    val largeFont = LocalDensity.current.fontScale >= 1.5f
 
     var selectedChoice by remember {
         mutableStateOf<ExtraTimeChoice>(
@@ -475,26 +479,49 @@ private fun UnlockedOptionsSection(
                     color = palette.text
                 )
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(ZenDimens.Space8)
-                ) {
-                    LockScreenController.PRESET_EXTRA_MINUTES.forEach { minutes ->
+                if (largeFont) {
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(ZenDimens.Space8),
+                        verticalArrangement = Arrangement.spacedBy(ZenDimens.Space8)
+                    ) {
+                        LockScreenController.PRESET_EXTRA_MINUTES.forEach { minutes ->
+                            ZenPillChip(
+                                text = stringResource(R.string.lock_preset_minutes, minutes),
+                                selected = selectedChoice == ExtraTimeChoice.Preset(minutes),
+                                enabled = !uiState.isProcessing,
+                                onClick = { selectedChoice = ExtraTimeChoice.Preset(minutes) }
+                            )
+                        }
                         ZenPillChip(
-                            text = stringResource(R.string.lock_preset_minutes, minutes),
-                            selected = selectedChoice == ExtraTimeChoice.Preset(minutes),
+                            text = stringResource(R.string.lock_preset_other),
+                            selected = selectedChoice == ExtraTimeChoice.Custom,
                             enabled = !uiState.isProcessing,
-                            onClick = { selectedChoice = ExtraTimeChoice.Preset(minutes) },
+                            onClick = { selectedChoice = ExtraTimeChoice.Custom }
+                        )
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(ZenDimens.Space8)
+                    ) {
+                        LockScreenController.PRESET_EXTRA_MINUTES.forEach { minutes ->
+                            ZenPillChip(
+                                text = stringResource(R.string.lock_preset_minutes, minutes),
+                                selected = selectedChoice == ExtraTimeChoice.Preset(minutes),
+                                enabled = !uiState.isProcessing,
+                                onClick = { selectedChoice = ExtraTimeChoice.Preset(minutes) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        ZenPillChip(
+                            text = stringResource(R.string.lock_preset_other),
+                            selected = selectedChoice == ExtraTimeChoice.Custom,
+                            enabled = !uiState.isProcessing,
+                            onClick = { selectedChoice = ExtraTimeChoice.Custom },
                             modifier = Modifier.weight(1f)
                         )
                     }
-                    ZenPillChip(
-                        text = stringResource(R.string.lock_preset_other),
-                        selected = selectedChoice == ExtraTimeChoice.Custom,
-                        enabled = !uiState.isProcessing,
-                        onClick = { selectedChoice = ExtraTimeChoice.Custom },
-                        modifier = Modifier.weight(1f)
-                    )
                 }
 
                 AnimatedVisibility(

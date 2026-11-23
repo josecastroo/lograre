@@ -163,31 +163,33 @@ private fun PermissionStepCard(
                     )
                 }
 
-                Column(modifier = Modifier.weight(1f)) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(ZenDimens.Space4)
+                ) {
                     Text(
                         text = "$stepNumber. $title",
                         style = typo.subtitle,
                         color = palette.text
                     )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .background(
-                            color = if (isGranted) palette.accent else palette.accent2,
-                            shape = ZenShapes.Pill
+                    Box(
+                        modifier = Modifier
+                            .background(
+                                color = if (isGranted) palette.accent else palette.accent2,
+                                shape = ZenShapes.Pill
+                            )
+                            .padding(horizontal = ZenDimens.Space12, vertical = ZenDimens.Space4)
+                    ) {
+                        Text(
+                            text = if (isGranted) {
+                                stringResource(R.string.permissions_status_active)
+                            } else {
+                                stringResource(R.string.permissions_status_pending)
+                            },
+                            style = typo.label,
+                            color = if (isGranted) palette.onAccent else palette.onAccent2
                         )
-                        .padding(horizontal = ZenDimens.Space12, vertical = ZenDimens.Space4)
-                ) {
-                    Text(
-                        text = if (isGranted) {
-                            stringResource(R.string.permissions_status_active)
-                        } else {
-                            stringResource(R.string.permissions_status_pending)
-                        },
-                        style = typo.label,
-                        color = if (isGranted) palette.onAccent else palette.onAccent2
-                    )
+                    }
                 }
             }
 

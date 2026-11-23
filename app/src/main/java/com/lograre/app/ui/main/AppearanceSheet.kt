@@ -5,6 +5,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
@@ -22,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
@@ -75,6 +78,7 @@ fun AppearanceBottomSheet(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun AppearanceSheetContent(
     currentThemeMode: ThemeMode,
@@ -85,6 +89,7 @@ internal fun AppearanceSheetContent(
 ) {
     val palette = LocalZenPalette.current
     val typo = LocalZenTypography.current
+    val largeFont = LocalDensity.current.fontScale >= 1.5f
 
     Column(
         modifier = Modifier
@@ -104,28 +109,52 @@ internal fun AppearanceSheetContent(
             color = palette.text
         )
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(ZenDimens.Space8)
-        ) {
-            ZenPillChip(
-                text = stringResource(R.string.theme_mode_system),
-                selected = currentThemeMode == ThemeMode.SYSTEM,
-                onClick = { onSelectThemeMode(ThemeMode.SYSTEM) },
-                modifier = Modifier.weight(1f)
-            )
-            ZenPillChip(
-                text = stringResource(R.string.theme_mode_light),
-                selected = currentThemeMode == ThemeMode.LIGHT,
-                onClick = { onSelectThemeMode(ThemeMode.LIGHT) },
-                modifier = Modifier.weight(1f)
-            )
-            ZenPillChip(
-                text = stringResource(R.string.theme_mode_dark),
-                selected = currentThemeMode == ThemeMode.DARK,
-                onClick = { onSelectThemeMode(ThemeMode.DARK) },
-                modifier = Modifier.weight(1f)
-            )
+        if (largeFont) {
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(ZenDimens.Space8),
+                verticalArrangement = Arrangement.spacedBy(ZenDimens.Space8)
+            ) {
+                ZenPillChip(
+                    text = stringResource(R.string.theme_mode_system),
+                    selected = currentThemeMode == ThemeMode.SYSTEM,
+                    onClick = { onSelectThemeMode(ThemeMode.SYSTEM) }
+                )
+                ZenPillChip(
+                    text = stringResource(R.string.theme_mode_light),
+                    selected = currentThemeMode == ThemeMode.LIGHT,
+                    onClick = { onSelectThemeMode(ThemeMode.LIGHT) }
+                )
+                ZenPillChip(
+                    text = stringResource(R.string.theme_mode_dark),
+                    selected = currentThemeMode == ThemeMode.DARK,
+                    onClick = { onSelectThemeMode(ThemeMode.DARK) }
+                )
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(ZenDimens.Space8)
+            ) {
+                ZenPillChip(
+                    text = stringResource(R.string.theme_mode_system),
+                    selected = currentThemeMode == ThemeMode.SYSTEM,
+                    onClick = { onSelectThemeMode(ThemeMode.SYSTEM) },
+                    modifier = Modifier.weight(1f)
+                )
+                ZenPillChip(
+                    text = stringResource(R.string.theme_mode_light),
+                    selected = currentThemeMode == ThemeMode.LIGHT,
+                    onClick = { onSelectThemeMode(ThemeMode.LIGHT) },
+                    modifier = Modifier.weight(1f)
+                )
+                ZenPillChip(
+                    text = stringResource(R.string.theme_mode_dark),
+                    selected = currentThemeMode == ThemeMode.DARK,
+                    onClick = { onSelectThemeMode(ThemeMode.DARK) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(ZenDimens.Space4))

@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import com.lograre.app.ui.theme.AppTheme
@@ -71,8 +72,7 @@ fun ZenButton(
     Box(
         modifier = modifier
             .then(widthModifier)
-            .height(ZenDimens.ButtonHeight)
-            .defaultMinSize(minWidth = ZenDimens.MinTouchTarget, minHeight = ZenDimens.MinTouchTarget)
+            .defaultMinSize(minWidth = ZenDimens.MinTouchTarget, minHeight = ZenDimens.ButtonHeight)
             .alpha(if (enabled) 1f else 0.45f)
             .clip(ZenShapes.Pill)
             .background(containerColor, ZenShapes.Pill)
@@ -89,14 +89,15 @@ fun ZenButton(
                 color = if (style == ZenButtonStyle.PRIMARY) palette.onAccent else palette.rippleColor,
                 onClick = onClick
             )
-            .padding(horizontal = ZenDimens.Space24),
+            .padding(horizontal = ZenDimens.Space24, vertical = ZenDimens.Space12),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = text,
             style = typo.subtitle,
             color = contentColor,
-            maxLines = 1,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
     }
@@ -190,14 +191,15 @@ fun ZenPillChip(
                 role = Role.Tab,
                 onClick = onClick
             )
-            .padding(horizontal = ZenDimens.Space16, vertical = ZenDimens.Space12),
+            .padding(horizontal = ZenDimens.Space12, vertical = ZenDimens.Space12),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = text,
             style = typo.subtitle,
             color = contentColor,
-            maxLines = 1,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
     }

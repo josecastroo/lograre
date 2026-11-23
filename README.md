@@ -15,6 +15,7 @@ Distribuida exclusivamente como APK instalable manualmente (sin Google Play ni r
 - **Aviso de 5 minutos:** notificación local cuando faltan ≤ 5 minutos para agotar el límite diario de una app (no se envía si el límite diario de la app es menor a 5 minutos).
 - **Reanudación tras reinicio:** `BootCompletedReceiver` (`BOOT_COMPLETED`, `MY_PACKAGE_REPLACED`) y reconexión del `AccessibilityService` restauran el reloj de confianza y el estado diario guardado.
 - **Sin respaldo en la nube:** `android:allowBackup="false"`, `dataExtractionRules` y `fullBackupContent` excluyen todos los dominios; al desinstalar se borra todo.
+- **Diseño "Lago y bosque" (claro, oscuro y sistema):** paleta propia verificada con WCAG AA (≥ 4.5:1), fuentes OFL empaquetadas (`Lora` y `Nunito`), superficies translúcidas sin sombras ni `blur()`, fondo vivo, cápsula de agua ondulante, círculo de respiración en bloqueo, ícono adaptativo con capa monocromática para Android 13+, respeto a `ANIMATOR_DURATION_SCALE == 0` y pausa automática de animaciones fuera de `RESUMED`.
 
 ## Requisitos de entorno
 
