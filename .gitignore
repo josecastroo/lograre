@@ -5,6 +5,7 @@ context/
 .gradle/
 build/
 app/build/
+app/release/
 captures/
 *.apk
 *.ap_
